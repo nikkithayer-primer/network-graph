@@ -183,27 +183,41 @@ class PoliticalDataManager {
         // Clean and normalize the name
         const cleanName = this.cleanNameForMatching(name);
         
-        // Try exact match first
+        // Try matching without titles first (most common case for political figures)
+        const nameWithoutTitles = this.cleanNameForMatching(this.removeCommonTitles(name));
+        
+        // Try exact match without titles first
+        const titleMatch = this.figureMap.get(nameWithoutTitles);
+        if (titleMatch) return titleMatch;
+        
+        // Try exact match with original clean name
         const exactMatch = this.figureMap.get(cleanName);
         if (exactMatch) return exactMatch;
         
-        // Try partial matching for names that might be incomplete
+        // Try partial matching without titles
         for (const [key, figure] of this.figureMap.entries()) {
-            if (key.includes(cleanName) || cleanName.includes(key)) {
+            const keyWithoutTitles = this.removeCommonTitles(key);
+            const cleanKeyWithoutTitles = this.cleanNameForMatching(keyWithoutTitles);
+            
+            // Check if names match when both have titles removed
+            if (cleanKeyWithoutTitles === nameWithoutTitles) {
                 return figure;
+            }
+            
+            // Check partial matches
+            if (cleanKeyWithoutTitles.includes(nameWithoutTitles) || nameWithoutTitles.includes(cleanKeyWithoutTitles)) {
+                // Only match if the shorter name is at least 3 characters to avoid false positives
+                if (Math.min(cleanKeyWithoutTitles.length, nameWithoutTitles.length) >= 3) {
+                    return figure;
+                }
             }
         }
         
-        // Try matching without titles
-        const nameWithoutTitles = this.removeCommonTitles(cleanName);
-        if (nameWithoutTitles !== cleanName) {
-            const titleMatch = this.figureMap.get(nameWithoutTitles);
-            if (titleMatch) return titleMatch;
-            
-            // Try partial matching without titles
-            for (const [key, figure] of this.figureMap.entries()) {
-                const keyWithoutTitles = this.removeCommonTitles(key);
-                if (keyWithoutTitles.includes(nameWithoutTitles) || nameWithoutTitles.includes(keyWithoutTitles)) {
+        // Try partial matching with original names (fallback)
+        for (const [key, figure] of this.figureMap.entries()) {
+            if (key.includes(cleanName) || cleanName.includes(key)) {
+                // Only match if the shorter name is at least 3 characters to avoid false positives
+                if (Math.min(key.length, cleanName.length) >= 3) {
                     return figure;
                 }
             }

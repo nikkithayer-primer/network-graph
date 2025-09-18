@@ -1,0 +1,34 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    background: var(--bg-light);
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    color: var(--text-primary);
+    overflow: hidden;
+}
+
+/* Loading animations */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Common utility classes */
+.no-data {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: normal;
+    font-size: 0.875rem;
+    padding: 48px 24px;
+}

@@ -9,8 +9,7 @@ class MapRenderer {
         this.markers = [];
         this.locationCache = new Map();
         this.colors = [
-            '#2563eb', '#dc2626', '#059669', '#d97706', 
-            '#7c3aed', '#db2777', '#0891b2', '#65a30d'
+            ...CSSUtils.getColorPalette().map
         ];
     }
 
@@ -87,9 +86,11 @@ class MapRenderer {
         });
 
         if (validMarkers > 0) {
-            // Fit map to show all markers
-            const group = new L.featureGroup(this.markers);
-            this.map.fitBounds(group.getBounds().pad(0.1));
+            // Fit map to show all markers with smart zoom handling
+            // Add small delay to ensure all markers are properly rendered
+            setTimeout(() => {
+                this.fitMapToMarkers();
+            }, 100);
         } else {
             this.showNoData('No valid locations found for mapping');
         }
@@ -177,7 +178,7 @@ class MapRenderer {
         const marker = L.circleMarker([coords.lat, coords.lng], {
             radius: Math.min(8 + Math.log(items.length) * 2, 15),
             fillColor: color,
-            color: '#ffffff',
+            color: CSSUtils.getCSSVariable('--text-white'),
             weight: 2,
             opacity: 1,
             fillOpacity: 0.8
@@ -258,6 +259,51 @@ class MapRenderer {
     }
 
     /**
+     * Fit map view to show all markers with smart zoom handling
+     */
+    fitMapToMarkers() {
+        if (!this.map || this.markers.length === 0) {
+            return;
+        }
+
+        try {
+            if (this.markers.length === 1) {
+                // For single marker, center on it with a reasonable zoom level
+                const marker = this.markers[0];
+                const latLng = marker.getLatLng();
+                this.map.setView([latLng.lat, latLng.lng], 10);
+            } else {
+                // For multiple markers, fit bounds with padding
+                const group = new L.featureGroup(this.markers);
+                const bounds = group.getBounds();
+                
+                // Check if bounds are valid
+                if (bounds.isValid()) {
+                    // Add padding and set maximum zoom level to prevent over-zooming
+                    const padding = 0.1; // 10% padding
+                    const maxZoom = 15; // Prevent zooming too close for clustered markers
+                    
+                    this.map.fitBounds(bounds.pad(padding), {
+                        maxZoom: maxZoom,
+                        animate: true,
+                        duration: 0.5
+                    });
+                } else {
+                    console.warn('Invalid bounds calculated for markers');
+                    // Fallback to default view
+                    this.map.setView([39.8283, -98.5795], 4);
+                }
+            }
+            
+            console.log(`Map zoomed to fit ${this.markers.length} markers`);
+        } catch (error) {
+            console.error('Error fitting map to markers:', error);
+            // Fallback to default view
+            this.map.setView([39.8283, -98.5795], 4);
+        }
+    }
+
+    /**
      * Clear all markers from the map
      */
     clearMarkers() {
@@ -318,7 +364,28 @@ class MapRenderer {
         if (this.map) {
             setTimeout(() => {
                 this.map.invalidateSize();
+                // Re-fit to markers after resize if we have markers
+                if (this.markers.length > 0) {
+                    this.fitMapToMarkers();
+                }
             }, 100);
+        }
+    }
+
+    /**
+     * Refresh map view (useful when switching tabs or after data updates)
+     */
+    refreshMap() {
+        if (this.map) {
+            // Invalidate size in case container dimensions changed
+            this.map.invalidateSize();
+            
+            // Re-fit to markers if we have any
+            if (this.markers.length > 0) {
+                setTimeout(() => {
+                    this.fitMapToMarkers();
+                }, 200); // Small delay to ensure map is properly sized
+            }
         }
     }
 

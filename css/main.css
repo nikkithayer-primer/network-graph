@@ -1,0 +1,22 @@
+/* Main CSS file that imports all modules */
+
+/* Import CSS variables first */
+@import 'variables.css';
+
+/* Import base styles */
+@import 'base.css';
+
+/* Import layout styles */
+@import 'layout.css';
+
+/* Import component styles */
+@import 'components.css';
+
+/* Import view-specific styles */
+@import 'views.css';
+
+/* Import profile modal styles */
+@import 'profile.css';
+
+/* Import responsive styles last */
+@import 'responsive.css';

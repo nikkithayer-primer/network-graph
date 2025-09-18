@@ -1,0 +1,282 @@
+/* Upload area */
+.upload-area {
+    border: 2px dashed var(--border-medium);
+    border-radius: 8px;
+    padding: 24px 20px;
+    text-align: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: var(--bg-light);
+}
+
+.upload-area:hover {
+    border-color: var(--action-blue);
+    background-color: var(--action-blue-light);
+}
+
+.upload-area.dragover {
+    border-color: var(--action-blue);
+    background-color: var(--action-blue-light);
+}
+
+.upload-area h3 {
+    color: var(--text-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.upload-area p {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+.upload-description {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 8px;
+}
+
+/* Form elements */
+.file-input {
+    display: none;
+}
+
+.upload-btn {
+    background: var(--action-blue);
+    color: var(--text-white);
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.upload-btn:hover {
+    background: var(--action-blue-hover);
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 140px;
+}
+
+.control-group label {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.control-group select,
+.control-group input {
+    padding: 8px 12px;
+    border: 1px solid var(--border-medium);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: var(--bg-white);
+    color: var(--text-primary);
+    transition: border-color 0.2s ease;
+}
+
+.control-group select:focus,
+.control-group input:focus {
+    outline: none;
+    border-color: var(--action-blue);
+    box-shadow: 0 0 0 3px var(--action-blue-subtle);
+}
+
+/* Tabs */
+.tab {
+    padding: 16px 20px;
+    background: none;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.tab.active {
+    color: var(--action-blue);
+    border-bottom-color: var(--action-blue);
+}
+
+.tab:hover {
+    color: var(--action-blue);
+    background: var(--action-blue-subtle);
+}
+
+/* Cards */
+.stat-card {
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    color: var(--text-primary);
+    padding: 24px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--action-blue);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-white);
+}
+
+th, td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-light);
+}
+
+th {
+    background: var(--bg-light);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    position: sticky;
+    top: 0;
+}
+
+td {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+
+tr:hover {
+    background: var(--bg-light);
+}
+
+/* Table cells with multiple pills */
+td:has(.table-actor-pill) {
+    line-height: 1.4;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* Actor Pills */
+.actor-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    margin: 2px 4px 2px 0;
+    transition: all 0.2s ease;
+    cursor: default;
+    border: 1px solid transparent;
+}
+
+.actor-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px var(--shadow-subtle);
+}
+
+.actor-pill-blue {
+    background-color: var(--pill-blue-bg);
+    color: var(--pill-blue-text);
+    border-color: var(--pill-blue-border);
+}
+
+.actor-pill-green {
+    background-color: var(--pill-green-bg);
+    color: var(--pill-green-text);
+    border-color: var(--pill-green-border);
+}
+
+.actor-pill-purple {
+    background-color: var(--pill-purple-bg);
+    color: var(--pill-purple-text);
+    border-color: var(--pill-purple-border);
+}
+
+.actor-pill-red {
+    background-color: var(--pill-red-bg);
+    color: var(--pill-red-text);
+    border-color: var(--pill-red-border);
+}
+
+.actor-pill-grey {
+    background-color: var(--bg-medium);
+    color: var(--text-secondary);
+    border-color: var(--border-medium);
+}
+
+.actor-pill-icon {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.actor-pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.actor-pills-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+/* Loading state for pills */
+.actor-pill-loading {
+    background-color: var(--bg-medium);
+    color: var(--text-tertiary);
+    border-color: var(--border-light);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Actor pill in table cells */
+.table-actor-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin: 1px 2px 1px 0;
+    vertical-align: middle;
+}
+
+/* Actor pill in map popups */
+.popup-actor-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin: 1px 2px 1px 0;
+    vertical-align: middle;
+}
+
+/* Popup content with multiple pills */
+.map-popup div:has(.popup-actor-pill) {
+    line-height: 1.3;
+}

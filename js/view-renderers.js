@@ -105,7 +105,12 @@ class ViewRenderers {
         // Hide no-data message
         if (noData) noData.style.display = 'none';
 
-        const headers = Object.keys(data[0]);
+        // Get headers and filter out internal columns (matching data, metadata, etc.)
+        const allHeaders = Object.keys(data[0]);
+        const headers = allHeaders.filter(h => 
+            !h.startsWith('_') && // Filter out metadata fields starting with underscore
+            !['actorMatches', 'targetMatches'].includes(h) // Filter out specific internal columns
+        );
         tableHeader.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
 
         tableBody.innerHTML = data.map(row => {
@@ -138,32 +143,6 @@ class ViewRenderers {
         
         // Render data on map
         await ViewRenderers.mapRenderer.renderData(data);
-    }
-
-    /**
-     * Render the initial political network from JSON data
-     * @param {Object} networkData - Network data with nodes and links
-     */
-    static async renderInitialPoliticalNetwork(networkData) {
-        ViewRenderers.initializeNetworkGraphRenderer();
-        
-        // Initialize network graph if not already done
-        if (!ViewRenderers.networkGraphRenderer.svg) {
-            ViewRenderers.networkGraphRenderer.initializeGraph('networkContainer');
-        }
-        
-        // Set profile page handler for political figures
-        ViewRenderers.networkGraphRenderer.setProfileHandler((figureData) => {
-            if (window.app && window.app.politicalDataManager && window.app.profilePage) {
-                const profileData = window.app.politicalDataManager.getProfileData(figureData.name);
-                if (profileData) {
-                    window.app.profilePage.showProfile(profileData);
-                }
-            }
-        });
-        
-        // Render political network data
-        await ViewRenderers.networkGraphRenderer.renderPoliticalNetwork(networkData);
     }
 
     /**
@@ -205,7 +184,7 @@ class ViewRenderers {
      * Render the timeline view
      * @param {Array<Object>} data - Array of data objects
      */
-    static renderTimeline(data) {
+    static async renderTimeline(data) {
         ViewRenderers.initializeTimelineRenderer();
         
         // Initialize timeline if not already done
@@ -214,7 +193,7 @@ class ViewRenderers {
         }
         
         // Render timeline data
-        ViewRenderers.timelineRenderer.renderTimeline(data);
+        await ViewRenderers.timelineRenderer.renderTimeline(data);
     }
 
     /**
@@ -345,9 +324,9 @@ class ViewRenderers {
             targetView.classList.add('active');
         }
 
-        // Resize map when switching to map view
+        // Refresh map when switching to map view (resize and re-fit to markers)
         if (viewName === 'map' && ViewRenderers.mapRenderer) {
-            ViewRenderers.mapRenderer.resizeMap();
+            ViewRenderers.mapRenderer.refreshMap();
         }
         
         // Resize network graph when switching to network view

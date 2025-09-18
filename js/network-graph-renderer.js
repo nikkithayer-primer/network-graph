@@ -26,9 +26,18 @@ class NetworkGraphRenderer {
      * Initialize color scale for different node types
      */
     initializeColorScale() {
+        const colors = CSSUtils.getColorPalette();
         this.colorScale = d3.scaleOrdinal()
             .domain(['actor', 'target', 'both', 'political_figure', 'democratic', 'republican', 'independent'])
-            .range(['#2563eb', '#dc2626', '#7c3aed', '#059669', '#1d4ed8', '#dc2626', '#6b7280']);
+            .range([
+                colors.network.actor,
+                colors.network.target,
+                colors.network.both,
+                colors.network.political_figure,
+                colors.network.democratic,
+                colors.network.republican,
+                colors.network.independent
+            ]);
     }
 
     /**
@@ -57,7 +66,7 @@ class NetworkGraphRenderer {
             .append('svg')
             .attr('width', this.width)
             .attr('height', this.height)
-            .style('background-color', '#f9fafb')
+            .style('background-color', CSSUtils.getCSSVariable('--bg-light'))
             .style('border-radius', '8px');
 
         // Add zoom behavior
@@ -115,7 +124,7 @@ class NetworkGraphRenderer {
         legendItems.append('circle')
             .attr('r', 8)
             .attr('fill', d => d.color)
-            .attr('stroke', '#ffffff')
+            .attr('stroke', CSSUtils.getCSSVariable('--bg-white'))
             .attr('stroke-width', 2);
 
         legendItems.append('text')
@@ -123,7 +132,7 @@ class NetworkGraphRenderer {
             .attr('y', 0)
             .attr('dy', '0.35em')
             .style('font-size', '12px')
-            .style('fill', '#374151')
+            .style('fill', CSSUtils.getCSSVariable('--text-primary'))
             .style('font-weight', '500')
             .text(d => d.label);
     }
@@ -140,8 +149,8 @@ class NetworkGraphRenderer {
         controls.append('rect')
             .attr('width', 130)
             .attr('height', 80)
-            .attr('fill', '#ffffff')
-            .attr('stroke', '#e5e7eb')
+            .attr('fill', CSSUtils.getCSSVariable('--bg-white'))
+            .attr('stroke', CSSUtils.getCSSVariable('--border-light'))
             .attr('rx', 6);
 
         // Add title
@@ -150,7 +159,7 @@ class NetworkGraphRenderer {
             .attr('y', 20)
             .style('font-size', '12px')
             .style('font-weight', '600')
-            .style('fill', '#374151')
+            .style('fill', CSSUtils.getCSSVariable('--text-primary'))
             .text('Controls');
 
         // Add reset zoom button
@@ -163,7 +172,7 @@ class NetworkGraphRenderer {
             .attr('y', 30)
             .attr('width', 110)
             .attr('height', 25)
-            .attr('fill', '#2563eb')
+            .attr('fill', CSSUtils.getCSSVariable('--action-blue'))
             .attr('rx', 4)
             .on('click', () => this.resetZoom());
 
@@ -171,7 +180,7 @@ class NetworkGraphRenderer {
             .attr('x', 65)
             .attr('y', 47)
             .style('font-size', '11px')
-            .style('fill', '#ffffff')
+            .style('fill', CSSUtils.getCSSVariable('--bg-white'))
             .style('text-anchor', 'middle')
             .style('font-weight', '500')
             .text('Reset Zoom')
@@ -183,7 +192,7 @@ class NetworkGraphRenderer {
             .attr('x', 10)
             .attr('y', 70)
             .style('font-size', '10px')
-            .style('fill', '#6b7280')
+            .style('fill', CSSUtils.getCSSVariable('--text-secondary'))
             .text('Nodes: 0');
     }
 
@@ -492,19 +501,19 @@ class NetworkGraphRenderer {
             .data(this.links)
             .enter()
             .append('line')
-            .attr('stroke', '#9ca3af')
+            .attr('stroke', CSSUtils.getCSSVariable('--border-dark'))
             .attr('stroke-opacity', 0.6)
             .attr('stroke-width', d => Math.max(1, Math.min(5, d.count)))
             .style('cursor', 'pointer')
             .on('click', (event, d) => this.showRelationshipPopover(event, d))
             .on('mouseover', function(event, d) {
                 d3.select(this)
-                    .attr('stroke', '#2563eb')
+                    .attr('stroke', CSSUtils.getCSSVariable('--action-blue'))
                     .attr('stroke-opacity', 0.8);
             })
             .on('mouseout', function(event, d) {
                 d3.select(this)
-                    .attr('stroke', '#9ca3af')
+                    .attr('stroke', CSSUtils.getCSSVariable('--border-dark'))
                     .attr('stroke-opacity', 0.6);
             });
 
@@ -519,7 +528,7 @@ class NetworkGraphRenderer {
             .append('circle')
             .attr('r', d => d.radius)
             .attr('fill', d => this.colorScale(d.type))
-            .attr('stroke', '#ffffff')
+            .attr('stroke', CSSUtils.getCSSVariable('--bg-white'))
             .attr('stroke-width', 2)
             .style('cursor', 'pointer')
             .call(this.createDragBehavior());
@@ -533,7 +542,7 @@ class NetworkGraphRenderer {
             .append('text')
             .style('font-size', '11px')
             .style('font-weight', '500')
-            .style('fill', '#374151')
+            .style('fill', CSSUtils.getCSSVariable('--text-primary'))
             .style('text-anchor', 'middle')
             .style('pointer-events', 'none')
             .text(d => d.name.length > 15 ? d.name.substring(0, 12) + '...' : d.name);
@@ -597,8 +606,8 @@ class NetworkGraphRenderer {
                 .attr('class', 'network-popover')
                 .style('position', 'absolute')
                 .style('visibility', 'hidden')
-                .style('background-color', '#ffffff')
-                .style('border', '1px solid #e5e7eb')
+                .style('background-color', CSSUtils.getCSSVariable('--bg-white'))
+                .style('border', `1px solid ${CSSUtils.getCSSVariable('--border-light')}`)
                 .style('border-radius', '8px')
                 .style('padding', '16px')
                 .style('box-shadow', '0 10px 25px rgba(0, 0, 0, 0.15)')
@@ -616,7 +625,7 @@ class NetworkGraphRenderer {
                 .style('right', '12px')
                 .style('cursor', 'pointer')
                 .style('font-size', '18px')
-                .style('color', '#6b7280')
+                .style('color', CSSUtils.getCSSVariable('--text-secondary'))
                 .style('font-weight', 'bold')
                 .text('×')
                 .on('click', () => {
@@ -677,23 +686,23 @@ class NetworkGraphRenderer {
         if (sentences.length === 0) {
             const popoverContent = `
                 <div style="font-weight: 600; margin-bottom: 12px; padding-right: 20px;">${nodeData.name}</div>
-                <div style="color: #6b7280; font-style: italic;">No sentences found for this actor.</div>
+                <div style="color: ${CSSUtils.getCSSVariable('--text-secondary')}; font-style: italic;">No sentences found for this actor.</div>
             `;
             popover.html(popoverContent);
         } else {
             const popoverContent = `
                 <div style="font-weight: 600; margin-bottom: 12px; padding-right: 20px;">${nodeData.name}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
+                <div style="font-size: 12px; color: ${CSSUtils.getCSSVariable('--text-secondary')}; margin-bottom: 12px;">
                     ${sentences.length} sentence${sentences.length !== 1 ? 's' : ''} found
                 </div>
                 <div style="max-height: 200px; overflow-y: auto;">
                     ${sentences.map((sentence, index) => `
-                        <div style="margin-bottom: 12px; padding: 8px; background-color: #f9fafb; border-radius: 4px; border-left: 3px solid #2563eb;">
+                        <div style="margin-bottom: 12px; padding: 8px; background-color: ${CSSUtils.getCSSVariable('--bg-light')}; border-radius: 4px; border-left: 3px solid ${CSSUtils.getCSSVariable('--action-blue')};">
                             <div style="font-size: 13px; line-height: 1.4;">${sentence}</div>
                         </div>
                     `).join('')}
                 </div>
-                <div class="popover-close" style="position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 18px; color: #6b7280; font-weight: bold;">×</div>
+                <div class="popover-close" style="position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 18px; color: ${CSSUtils.getCSSVariable('--text-secondary')}; font-weight: bold;">×</div>
             `;
             popover.html(popoverContent);
             
@@ -704,15 +713,8 @@ class NetworkGraphRenderer {
                 });
         }
         
-        // Position popover near the clicked node
-        const containerRect = document.getElementById(this.containerId).getBoundingClientRect();
-        const popoverX = containerRect.left + nodeData.x + 20;
-        const popoverY = containerRect.top + nodeData.y - 50;
-        
-        popover
-            .style('left', Math.max(10, popoverX) + 'px')
-            .style('top', Math.max(10, popoverY) + 'px')
-            .style('visibility', 'visible');
+        // Position popover near the click location using smart positioning
+        PopoverUtils.positionEventPopover(popover, event);
     }
 
     /**
@@ -753,8 +755,8 @@ class NetworkGraphRenderer {
                 .attr('class', 'network-relationship-popover')
                 .style('position', 'absolute')
                 .style('visibility', 'hidden')
-                .style('background-color', '#ffffff')
-                .style('border', '1px solid #e5e7eb')
+                .style('background-color', CSSUtils.getCSSVariable('--bg-white'))
+                .style('border', `1px solid ${CSSUtils.getCSSVariable('--border-light')}`)
                 .style('border-radius', '8px')
                 .style('padding', '16px')
                 .style('box-shadow', '0 10px 25px rgba(0, 0, 0, 0.15)')
@@ -776,40 +778,40 @@ class NetworkGraphRenderer {
             <div style="font-weight: 600; margin-bottom: 12px; padding-right: 20px;">
                 Relationship: ${sourceActor} → ${targetActor}
             </div>
-            <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
+            <div style="font-size: 12px; color: ${CSSUtils.getCSSVariable('--text-secondary')}; margin-bottom: 12px;">
                 ${records.length} interaction${records.length !== 1 ? 's' : ''} found
             </div>
             <div style="margin-bottom: 16px;">
-                <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Actions:</div>
+                <div style="font-weight: 500; margin-bottom: 8px; color: ${CSSUtils.getCSSVariable('--text-primary')};">Actions:</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                     ${actions.map(action => `
-                        <span style="background: #dbeafe; color: #1d4ed8; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                        <span style="background: ${CSSUtils.getCSSVariable('--action-blue-light')}; color: ${CSSUtils.getCSSVariable('--action-blue-hover')}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
                             ${action}
                         </span>
                     `).join('')}
                 </div>
             </div>
             <div style="max-height: 250px; overflow-y: auto;">
-                <div style="font-weight: 500; margin-bottom: 8px; color: #374151;">Details:</div>
+                <div style="font-weight: 500; margin-bottom: 8px; color: ${CSSUtils.getCSSVariable('--text-primary')};">Details:</div>
                 ${records.map((record, index) => `
-                    <div style="margin-bottom: 12px; padding: 12px; background-color: #f9fafb; border-radius: 6px; border-left: 3px solid #2563eb;">
+                    <div style="margin-bottom: 12px; padding: 12px; background-color: ${CSSUtils.getCSSVariable('--bg-light')}; border-radius: 6px; border-left: 3px solid ${CSSUtils.getCSSVariable('--action-blue')};">
                         <div style="font-size: 13px; line-height: 1.4; margin-bottom: 8px;">
                             <strong>${record.Action || 'Unknown Action'}:</strong> ${record.Sentence || 'No description available'}
                         </div>
                         ${record['Date Received'] || record.Datetimes ? `
-                            <div style="font-size: 11px; color: #6b7280;">
+                            <div style="font-size: 11px; color: ${CSSUtils.getCSSVariable('--text-secondary')};">
                                 📅 ${record['Date Received'] || record.Datetimes}
                             </div>
                         ` : ''}
                         ${record.Locations ? `
-                            <div style="font-size: 11px; color: #6b7280;">
+                            <div style="font-size: 11px; color: ${CSSUtils.getCSSVariable('--text-secondary')};">
                                 📍 ${record.Locations}
                             </div>
                         ` : ''}
                     </div>
                 `).join('')}
             </div>
-            <div class="popover-close" style="position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 18px; color: #6b7280; font-weight: bold;">×</div>
+            <div class="popover-close" style="position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 18px; color: ${CSSUtils.getCSSVariable('--text-secondary')}; font-weight: bold;">×</div>
         `;
 
         popover.html(popoverContent);
@@ -820,15 +822,8 @@ class NetworkGraphRenderer {
                 popover.style('visibility', 'hidden');
             });
 
-        // Position popover near the click location
-        const containerRect = document.getElementById(this.containerId).getBoundingClientRect();
-        const popoverX = event.pageX + 10;
-        const popoverY = event.pageY - 50;
-        
-        popover
-            .style('left', Math.max(10, Math.min(popoverX, window.innerWidth - 470)) + 'px')
-            .style('top', Math.max(10, popoverY) + 'px')
-            .style('visibility', 'visible');
+        // Position popover near the click location using smart positioning
+        PopoverUtils.positionEventPopover(popover, event);
 
         // Close popover when clicking outside (but not immediately)
         setTimeout(() => {

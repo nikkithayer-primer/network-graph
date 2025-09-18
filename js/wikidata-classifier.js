@@ -143,6 +143,9 @@ class WikidataClassifier {
         
         let normalized = name.trim();
         
+        // Remove common political and professional titles first
+        normalized = this.removeCommonTitles(normalized);
+        
         // Handle possessive forms (Qatar's -> Qatar, United States' -> United States)
         normalized = normalized.replace(/['']s?$/i, '');
         
@@ -177,6 +180,51 @@ class WikidataClassifier {
         normalized = normalized.replace(/\s+/g, ' ').trim();
         
         return normalized;
+    }
+
+    /**
+     * Remove common political and professional titles from names
+     * @param {string} name - Name with potential titles
+     * @returns {string} Name without common titles
+     */
+    removeCommonTitles(name) {
+        // List of common political titles and their variations
+        const titles = [
+            'sen\\.?\\s+', 'senator\\s+',
+            'rep\\.?\\s+', 'representative\\s+',
+            'gov\\.?\\s+', 'governor\\s+',
+            'pres\\.?\\s+', 'president\\s+',
+            'vice\\s+president\\s+', 'vp\\s+',
+            'sec\\.?\\s+', 'secretary\\s+',
+            'attorney\\s+general\\s+',
+            'speaker\\s+',
+            'leader\\s+',
+            'chair\\s+', 'chairman\\s+', 'chairwoman\\s+',
+            'amb\\.?\\s+', 'ambassador\\s+',
+            'judge\\s+', 'justice\\s+',
+            'mayor\\s+',
+            'dr\\.?\\s+', 'doctor\\s+',
+            'mr\\.?\\s+', 'mrs\\.?\\s+', 'ms\\.?\\s+', 'miss\\s+',
+            'the\\s+honorable\\s+', 'hon\\.?\\s+'
+        ];
+        
+        let cleanName = name;
+        const originalName = name;
+        
+        // Remove titles from the beginning of the name
+        for (const title of titles) {
+            const regex = new RegExp('^' + title, 'gi');
+            cleanName = cleanName.replace(regex, '');
+        }
+        
+        const result = cleanName.trim();
+        
+        // Debug logging for title removal
+        if (result !== originalName) {
+            console.log(`Title removed: "${originalName}" → "${result}"`);
+        }
+        
+        return result;
     }
 
     /**

@@ -8,6 +8,7 @@ class TimelineRenderer {
         this.container = null;
         this.data = [];
         this.groupedData = {};
+        this.actorPillRenderer = new ActorPillRenderer();
     }
 
     /**
@@ -27,7 +28,7 @@ class TimelineRenderer {
      * Render timeline data
      * @param {Array<Object>} data - Array of data objects
      */
-    renderTimeline(data) {
+    async renderTimeline(data) {
         if (!this.container) {
             console.error('Timeline not initialized');
             return;
@@ -41,6 +42,10 @@ class TimelineRenderer {
         }
 
         this.hideNoData();
+        
+        // Initialize actor classifications
+        await this.actorPillRenderer.initializeClassifications(data);
+        
         this.processTimelineData(data);
         this.renderTimelineView();
     }
@@ -206,16 +211,15 @@ class TimelineRenderer {
         return `
             <div class="timeline-card">
                 <div class="timeline-card-header">
-                    <div class="timeline-card-action">${record.Action || 'Unknown Action'}</div>
+                    <div class="timeline-card-sentence">${record.Sentence || 'No description available'}</div>
                 </div>
                 <div class="timeline-card-body">
-                    <div class="timeline-card-sentence">${record.Sentence || 'No description available'}</div>
                     <div class="timeline-card-details">
                         ${actors.length > 0 ? `
                             <div class="timeline-detail">
                                 <span class="timeline-detail-label">Actors:</span>
                                 <div class="timeline-detail-pills">
-                                    ${actors.map(actor => `<span class="timeline-pill actor-pill">${actor}</span>`).join('')}
+                                    ${this.actorPillRenderer.renderActorPills(actors, 'normal')}
                                 </div>
                             </div>
                         ` : ''}
@@ -223,7 +227,7 @@ class TimelineRenderer {
                             <div class="timeline-detail">
                                 <span class="timeline-detail-label">Targets:</span>
                                 <div class="timeline-detail-pills">
-                                    ${targets.map(target => `<span class="timeline-pill target-pill">${target}</span>`).join('')}
+                                    ${this.actorPillRenderer.renderActorPills(targets, 'normal')}
                                 </div>
                             </div>
                         ` : ''}

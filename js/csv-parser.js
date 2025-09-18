@@ -25,7 +25,13 @@ class CSVParser {
                     
                     // Process the row to split actors and targets with "&" or "and"
                     const processedRows = CSVParser.splitActorsAndTargets(row);
-                    data.push(...processedRows);
+                    
+                    // Normalize datetime fields in each processed row
+                    const normalizedRows = processedRows.map(processedRow => 
+                        CSVParser.normalizeDateTimeFields(processedRow)
+                    );
+                    
+                    data.push(...normalizedRows);
                 }
             }
         }
@@ -160,6 +166,39 @@ class CSVParser {
         }
         
         return finalSplit;
+    }
+
+    /**
+     * Normalize datetime fields in a row using natural language parsing
+     * @param {Object} row - Row object to normalize
+     * @returns {Object} Row with normalized datetime fields
+     */
+    static normalizeDateTimeFields(row) {
+        const normalizedRow = { ...row };
+        const dateTimeParser = new DateTimeParser();
+        
+        // List of fields that might contain datetime information
+        const dateTimeFields = ['Datetimes', 'Date Received', 'Date', 'Time', 'DateTime'];
+        
+        dateTimeFields.forEach(field => {
+            if (normalizedRow[field] && typeof normalizedRow[field] === 'string') {
+                const originalValue = normalizedRow[field].trim();
+                
+                // Only process if it looks like natural language
+                if (dateTimeParser.containsNaturalLanguage(originalValue)) {
+                    const normalizedDate = dateTimeParser.parseAndNormalize(originalValue);
+                    
+                    // Log the transformation for debugging
+                    if (normalizedDate !== originalValue) {
+                        console.log(`DateTime normalized: "${originalValue}" → "${normalizedDate}"`);
+                    }
+                    
+                    normalizedRow[field] = normalizedDate;
+                }
+            }
+        });
+        
+        return normalizedRow;
     }
 }
 

@@ -1,0 +1,305 @@
+/* Profile Page Styles */
+.profile-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--overlay-bg);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.profile-modal {
+    background: var(--bg-white);
+    border-radius: 12px;
+    max-width: 800px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 25px 50px var(--shadow-heavy);
+}
+
+.profile-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-light);
+    border-radius: 12px 12px 0 0;
+    position: relative;
+}
+
+.profile-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.profile-close:hover {
+    background: var(--bg-medium);
+    color: var(--text-primary);
+}
+
+.profile-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    padding-right: 40px;
+}
+
+.profile-role {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.profile-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.profile-state {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.party-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.party-badge.democratic {
+    background: var(--action-blue-light);
+    color: var(--action-blue);
+}
+
+.party-badge.republican {
+    background: var(--status-red-light);
+    color: var(--status-red);
+}
+
+.party-badge.independent {
+    background: var(--bg-medium);
+    color: var(--text-secondary);
+}
+
+.profile-content {
+    padding: 24px;
+}
+
+.profile-section {
+    margin-bottom: 32px;
+}
+
+.profile-section:last-child {
+    margin-bottom: 0;
+}
+
+.profile-section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--action-blue);
+    display: inline-block;
+}
+
+.profile-alternate-names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.alternate-name-tag {
+    background: var(--bg-light);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border-light);
+}
+
+.profile-organizations {
+    display: grid;
+    gap: 12px;
+}
+
+.organization-item {
+    background: var(--bg-light);
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid var(--action-blue);
+}
+
+.org-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.org-relationship {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.profile-connections {
+    display: grid;
+    gap: 12px;
+}
+
+.connection-item {
+    background: var(--bg-light);
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid var(--status-green-accent);
+}
+
+.connection-target {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.connection-relationship {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.profile-events {
+    display: grid;
+    gap: 16px;
+}
+
+.event-item {
+    background: var(--bg-light);
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid var(--status-yellow-accent);
+}
+
+.event-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+
+.event-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.event-relationship {
+    background: var(--status-yellow-light);
+    color: var(--status-yellow);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.event-date, .event-location {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.profile-quotes {
+    display: grid;
+    gap: 20px;
+}
+
+.quote-item {
+    background: var(--bg-light);
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid var(--status-purple-accent);
+    position: relative;
+}
+
+.quote-text {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    font-style: italic;
+    margin-bottom: 12px;
+}
+
+.quote-attribution {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.quote-source {
+    font-weight: 500;
+}
+
+.profile-sentences {
+    display: grid;
+    gap: 16px;
+}
+
+.sentence-item {
+    background: var(--bg-light);
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid var(--action-blue);
+}
+
+.sentence-text {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.sentence-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.sentence-action {
+    background: var(--action-blue-light);
+    color: var(--action-blue);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.sentence-date, .sentence-location {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
