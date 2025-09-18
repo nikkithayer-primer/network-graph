@@ -1,0 +1,11 @@
+Actor,Action,Target,Sentence,Date Received,Locations,Datetimes
+"John Smith","contacted","Mary Johnson","John Smith contacted Mary Johnson regarding the project proposal","2024-01-15","New York, Manhattan","2024-01-15T09:30:00"
+"Sarah Wilson","met with","Tech Corp","Sarah Wilson met with Tech Corp executives to discuss partnership opportunities","2024-01-16","San Francisco, California","2024-01-16T14:00:00"
+"Mike Brown","called","John Smith","Mike Brown called John Smith to follow up on the meeting","2024-01-17","Chicago, Illinois","2024-01-17T11:15:00"
+"Mary Johnson","emailed","Sarah Wilson","Mary Johnson emailed Sarah Wilson with updated project specifications","2024-01-18","New York, Brooklyn","2024-01-18T16:45:00"
+"Tech Corp","responded to","Sarah Wilson","Tech Corp responded to Sarah Wilson with their terms and conditions","2024-01-19","San Francisco, California","2024-01-19T10:20:00"
+"John Smith","visited","Tech Corp","John Smith visited Tech Corp headquarters for final negotiations","2024-01-20","San Francisco, California","2024-01-20T13:00:00"
+"Sarah Wilson","signed agreement with","Tech Corp","Sarah Wilson signed the partnership agreement with Tech Corp","2024-01-21","San Francisco, California","2024-01-21T15:30:00"
+"Mike Brown","informed","Mary Johnson","Mike Brown informed Mary Johnson about the successful partnership","2024-01-22","Chicago, Illinois","2024-01-22T09:00:00"
+"Mary Johnson","congratulated","John Smith","Mary Johnson congratulated John Smith on closing the deal","2024-01-23","New York, Manhattan","2024-01-23T12:00:00"
+"Tech Corp","scheduled meeting with","All Partners","Tech Corp scheduled a kickoff meeting with all partners","2024-01-24","San Francisco, California","2024-01-24T14:30:00"

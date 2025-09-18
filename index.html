@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Graph CSV Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Network Graph CSV Analyzer</h1>
+            <p>Upload your CSV file to analyze Actor, Action, Target relationships with filtering and visualization capabilities</p>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <h3>📁 Upload CSV File</h3>
+                <p>Drag and drop your CSV file here or click to browse</p>
+                <p class="upload-description">
+                    Expected columns: Actor, Action, Target, Sentence, Date Received, Locations, Datetimes
+                </p>
+                <input type="file" id="fileInput" class="file-input" accept=".csv">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Choose File
+                </button>
+            </div>
+        </div>
+
+        <div class="controls" id="controls">
+            <div class="control-group">
+                <label for="actorFilter">Filter by Actor:</label>
+                <select id="actorFilter">
+                    <option value="">All Actors</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="targetFilter">Filter by Target:</label>
+                <select id="targetFilter">
+                    <option value="">All Targets</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="locationFilter">Filter by Location:</label>
+                <select id="locationFilter">
+                    <option value="">All Locations</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="sortBy">Sort by:</label>
+                <select id="sortBy">
+                    <option value="datetime">Date/Time</option>
+                    <option value="actor">Actor</option>
+                    <option value="target">Target</option>
+                    <option value="action">Action</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="sortOrder">Order:</label>
+                <select id="sortOrder">
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="view-tabs" id="viewTabs">
+            <button class="tab active" onclick="switchView('summary')">📊 Summary</button>
+            <button class="tab" onclick="switchView('table')">📋 Table View</button>
+            <button class="tab" onclick="switchView('cards')">🗃️ Card View</button>
+            <button class="tab" onclick="switchView('aggregation')">📈 Aggregations</button>
+        </div>
+
+        <div class="content">
+            <div id="summaryView" class="data-view active">
+                <div class="summary-stats" id="summaryStats"></div>
+                <div class="no-data">Upload a CSV file to see summary statistics</div>
+            </div>
+
+            <div id="tableView" class="data-view">
+                <div class="table-container">
+                    <table id="dataTable">
+                        <thead id="tableHeader"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="cardsView" class="data-view">
+                <div class="card-view" id="cardContainer"></div>
+            </div>
+
+            <div id="aggregationView" class="data-view">
+                <div id="aggregationContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script src="js/csv-parser.js"></script>
+    <script src="js/file-handler.js"></script>
+    <script src="js/data-manager.js"></script>
+    <script src="js/view-renderers.js"></script>
+    <script src="js/ui-controller.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
