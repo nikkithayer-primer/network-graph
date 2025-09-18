@@ -34,6 +34,14 @@ class UIController {
         window.switchView = (viewName) => {
             ViewRenderers.switchView(viewName, event);
         };
+        
+        // Upload view switching - handled globally
+        window.showUploadView = () => {
+            if (window.app) {
+                window.app.showUploadView();
+                window.app.reset();
+            }
+        };
     }
 
     /**

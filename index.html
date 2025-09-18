@@ -68,30 +68,33 @@
         </div>
 
         <div class="view-tabs" id="viewTabs">
-            <button class="tab active" onclick="switchView('summary')">📊 Summary</button>
-            <button class="tab" onclick="switchView('table')">📋 Table View</button>
+            <button class="tab active" onclick="switchView('table')">📋 Table View</button>
             <button class="tab" onclick="switchView('map')">🗺️ Map View</button>
+            <button class="tab" onclick="switchView('network')">🕸️ Network Graph</button>
             <button class="tab" onclick="switchView('aggregation')">📈 Aggregations</button>
         </div>
 
         <div class="content">
-            <div id="summaryView" class="data-view active">
+            <div id="tableView" class="data-view active">
                 <div class="summary-stats" id="summaryStats"></div>
-                <div class="no-data">Upload a CSV file to see summary statistics</div>
-            </div>
-
-            <div id="tableView" class="data-view">
                 <div class="table-container">
                     <table id="dataTable">
                         <thead id="tableHeader"></thead>
                         <tbody id="tableBody"></tbody>
                     </table>
                 </div>
+                <div class="no-data">Upload a CSV file to see your data</div>
             </div>
 
             <div id="mapView" class="data-view">
                 <div id="mapContainer" class="map-container">
                     <div class="no-data">Upload a CSV file to see locations on the map</div>
+                </div>
+            </div>
+
+            <div id="networkView" class="data-view">
+                <div id="networkContainer" class="network-container">
+                    <div class="no-data">Upload a CSV file to see the network graph</div>
                 </div>
             </div>
 
@@ -105,6 +108,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 
     <!-- JavaScript Modules -->
     <script src="js/csv-parser.js"></script>
@@ -113,6 +117,7 @@
     <script src="js/wikidata-classifier.js"></script>
     <script src="js/actor-pill-renderer.js"></script>
     <script src="js/map-renderer.js"></script>
+    <script src="js/network-graph-renderer.js"></script>
     <script src="js/view-renderers.js"></script>
     <script src="js/ui-controller.js"></script>
     <script src="js/app.js"></script>

@@ -11,6 +11,32 @@ class WikidataClassifier {
         this.lastRequestTime = 0;
         
         // Wikidata entity IDs for classification
+        // Manual overrides for ambiguous names that should be prioritized as specific classifications
+        this.manualOverrides = {
+            // Countries
+            'Israel': 'country',
+            'Jordan': 'country', 
+            'Georgia': 'country',
+            'Chad': 'country',
+            'Niger': 'country',
+            'Mali': 'country',
+            'Turkey': 'country',
+            'Poland': 'country',
+            'Hungary': 'country',
+            'Cyprus': 'country',
+            'Malta': 'country',
+            'Monaco': 'country',
+            'Andorra': 'country',
+            'Luxembourg': 'country',
+            'Liechtenstein': 'country',
+            'San Marino': 'country',
+            'Vatican': 'country',
+            'Palestine': 'country',
+            
+            // Political Organizations
+            'Hamas': 'political_organization'
+        };
+        
         this.classifications = {
             // Countries and regions
             'Q6256': 'country', // country
@@ -29,25 +55,104 @@ class WikidataClassifier {
             'Q5': 'person', // human
             'Q215627': 'person', // person
             
-            // Organizations
+            // Public Office Holders (specific category of people)
+            'Q82955': 'public_office', // politician
+            'Q372436': 'public_office', // statesperson
+            'Q212071': 'public_office', // government official
+            'Q1097498': 'public_office', // government minister
+            'Q19546': 'public_office', // prime minister
+            'Q30461': 'public_office', // president
+            'Q48352': 'public_office', // head of state
+            'Q2285706': 'public_office', // head of government
+            'Q189290': 'public_office', // military officer
+            'Q193391': 'public_office', // ambassador
+            'Q16707842': 'public_office', // judge
+            'Q40348': 'public_office', // lawyer (in government context)
+            'Q1055894': 'public_office', // governor
+            'Q294126': 'public_office', // mayor
+            'Q486839': 'public_office', // senator
+            'Q18018860': 'public_office', // member of parliament
+            'Q13218630': 'public_office', // member of house of representatives
+            'Q5096': 'public_office', // mayor
+            'Q15647814': 'public_office', // deputy
+            'Q140686': 'public_office', // chairperson
+            
+            // Political Organizations (specific category)
+            'Q7278': 'political_organization', // political party
+            'Q2659904': 'political_organization', // government organization
+            'Q327333': 'political_organization', // government agency
+            'Q1391145': 'political_organization', // international organization
+            'Q1371037': 'political_organization', // military organization
+            'Q61951': 'political_organization', // armed forces
+            'Q15911314': 'political_organization', // political organization
+            'Q2467461': 'political_organization', // government institution
+            'Q4120211': 'political_organization', // regional government
+            'Q16334295': 'political_organization', // group of politicians
+            'Q2824523': 'political_organization', // political alliance
+            'Q748019': 'political_organization', // political coalition
+            'Q1752346': 'political_organization', // cabinet
+            'Q11204': 'political_organization', // parliament
+            'Q35749': 'political_organization', // parliament
+            'Q1752346': 'political_organization', // government cabinet
+            
+            // Regular Organizations
             'Q43229': 'organization', // organization
             'Q4830453': 'organization', // business
             'Q783794': 'organization', // company
             'Q891723': 'organization', // public company
             'Q1616075': 'organization', // private company
             'Q4830453': 'organization', // enterprise
-            'Q2659904': 'organization', // government organization
-            'Q327333': 'organization', // government agency
-            'Q1391145': 'organization', // international organization
             'Q163740': 'organization', // non-profit organization
-            'Q7278': 'organization', // political party
             'Q31855': 'organization', // research institute
-            'Q2467461': 'organization', // university
             'Q3918': 'organization', // university
             'Q875538': 'organization', // university
-            'Q1371037': 'organization', // military organization
-            'Q61951': 'organization', // armed forces
         };
+    }
+
+    /**
+     * Normalize entity names to handle possessives, plurals, and other variations
+     * @param {string} name - Original entity name
+     * @returns {string} Normalized entity name
+     */
+    normalizeName(name) {
+        if (!name || !name.trim()) return name;
+        
+        let normalized = name.trim();
+        
+        // Handle possessive forms (Qatar's -> Qatar, United States' -> United States)
+        normalized = normalized.replace(/['']s?$/i, '');
+        
+        // Handle common plural forms for countries/organizations
+        // But be careful not to break legitimate plurals like "Philippines" or "Netherlands"
+        const preservePlurals = [
+            'Philippines', 'Netherlands', 'Maldives', 'Seychelles', 'Bahamas', 
+            'Comoros', 'Marshall Islands', 'Solomon Islands', 'Cayman Islands',
+            'Virgin Islands', 'Falkland Islands', 'Cook Islands', 'Faroe Islands',
+            'United States', 'United Nations', 'European Union', 'Arab Emirates',
+            'Central African States', 'Pacific Islands'
+        ];
+        
+        // Don't modify names that should keep their plural form
+        const shouldPreservePlural = preservePlurals.some(preserve => 
+            normalized.toLowerCase().includes(preserve.toLowerCase())
+        );
+        
+        if (!shouldPreservePlural) {
+            // Remove simple plural 's' for organizations/groups, but be conservative
+            // Only do this for specific patterns that are likely to be pluralized entities
+            if (/\b(government|minister|official|partie|compan|organization)s$/i.test(normalized)) {
+                normalized = normalized.replace(/s$/i, '');
+            }
+            // Handle "ies" -> "y" (companies -> company, but not countries -> country)
+            else if (/\b(compan|agenc)ies$/i.test(normalized)) {
+                normalized = normalized.replace(/ies$/i, 'y');
+            }
+        }
+        
+        // Clean up extra whitespace
+        normalized = normalized.replace(/\s+/g, ' ').trim();
+        
+        return normalized;
     }
 
     /**
@@ -77,31 +182,60 @@ class WikidataClassifier {
     async classifyActor(actor) {
         if (!actor || !actor.trim()) return 'unknown';
 
-        const normalizedActor = actor.trim();
+        const originalActor = actor.trim();
+        const normalizedActor = this.normalizeName(originalActor);
         
-        // Check cache first
+        // Check manual overrides first (try both original and normalized)
+        if (this.manualOverrides[originalActor]) {
+            const override = this.manualOverrides[originalActor];
+            this.cache.set(originalActor, override);
+            return override;
+        }
+        if (this.manualOverrides[normalizedActor]) {
+            const override = this.manualOverrides[normalizedActor];
+            this.cache.set(originalActor, override);
+            return override;
+        }
+        
+        // Check cache (try both original and normalized)
+        if (this.cache.has(originalActor)) {
+            return this.cache.get(originalActor);
+        }
         if (this.cache.has(normalizedActor)) {
-            return this.cache.get(normalizedActor);
+            const cached = this.cache.get(normalizedActor);
+            this.cache.set(originalActor, cached); // Cache the original form too
+            return cached;
         }
 
-        // Check if query is already pending
+        // Check if query is already pending (try both forms)
+        if (this.pendingQueries.has(originalActor)) {
+            return await this.pendingQueries.get(originalActor);
+        }
         if (this.pendingQueries.has(normalizedActor)) {
             return await this.pendingQueries.get(normalizedActor);
         }
 
-        // Create pending query promise
+        // Create pending query promise - use normalized name for the actual query
         const queryPromise = this.performWikidataQuery(normalizedActor);
-        this.pendingQueries.set(normalizedActor, queryPromise);
+        this.pendingQueries.set(originalActor, queryPromise);
+        if (normalizedActor !== originalActor) {
+            this.pendingQueries.set(normalizedActor, queryPromise);
+        }
 
         try {
             const result = await queryPromise;
-            this.cache.set(normalizedActor, result);
+            this.cache.set(originalActor, result);
+            if (normalizedActor !== originalActor) {
+                this.cache.set(normalizedActor, result);
+            }
+            this.pendingQueries.delete(originalActor);
             this.pendingQueries.delete(normalizedActor);
             return result;
         } catch (error) {
-            console.warn(`Failed to classify actor: ${normalizedActor}`, error);
+            console.warn(`Failed to classify actor: ${originalActor}`, error);
+            this.pendingQueries.delete(originalActor);
             this.pendingQueries.delete(normalizedActor);
-            this.cache.set(normalizedActor, 'unknown');
+            this.cache.set(originalActor, 'unknown');
             return 'unknown';
         }
     }
@@ -168,6 +302,8 @@ class WikidataClassifier {
             country: 0,
             region: 0,
             person: 0,
+            public_office: 0,
+            political_organization: 0,
             organization: 0
         };
 
@@ -182,13 +318,23 @@ class WikidataClassifier {
             }
         }
 
-        // Return the most common classification, or 'unknown' if none found
+        // Return the most common classification, with priority for geopolitical entities
         const maxCount = Math.max(...Object.values(classificationCounts));
         if (maxCount === 0) {
             return 'unknown';
         }
 
-        // Find the classification with the highest count
+        // Priority order: country > region > political_organization > public_office > organization > person
+        const priorityOrder = ['country', 'region', 'political_organization', 'public_office', 'organization', 'person'];
+        
+        // If there are ties, prioritize based on our priority order
+        for (const classification of priorityOrder) {
+            if (classificationCounts[classification] === maxCount) {
+                return classification;
+            }
+        }
+
+        // Fallback to first classification with max count
         for (const [classification, count] of Object.entries(classificationCounts)) {
             if (count === maxCount) {
                 return classification;
@@ -210,6 +356,10 @@ class WikidataClassifier {
                 return 'blue';
             case 'person':
                 return 'green';
+            case 'public_office':
+                return 'green'; // Same as person since it maps to person
+            case 'political_organization':
+                return 'red';
             case 'organization':
                 return 'purple';
             default:
@@ -230,6 +380,10 @@ class WikidataClassifier {
                 return 'Region';
             case 'person':
                 return 'Person';
+            case 'public_office':
+                return 'Public Office';
+            case 'political_organization':
+                return 'Political Organization';
             case 'organization':
                 return 'Organization';
             default:
@@ -262,8 +416,14 @@ class WikidataClassifier {
     async preloadCommonEntities() {
         const commonEntities = [
             'United States', 'China', 'Russia', 'Germany', 'France', 'United Kingdom',
-            'Japan', 'India', 'Brazil', 'Canada', 'Australia', 'Mexico',
+            'Japan', 'India', 'Brazil', 'Canada', 'Australia', 'Mexico', 'Israel',
+            'Jordan', 'Egypt', 'Saudi Arabia', 'Iran', 'Iraq', 'Turkey', 'Greece',
+            'Italy', 'Spain', 'Netherlands', 'Belgium', 'Switzerland', 'Austria',
             'European Union', 'NATO', 'United Nations', 'World Bank',
+            'Democratic Party', 'Republican Party', 'Conservative Party', 'Labour Party',
+            'Congress', 'Senate', 'Parliament', 'CIA', 'FBI', 'Pentagon',
+            'Joe Biden', 'Donald Trump', 'Barack Obama', 'Xi Jinping', 'Vladimir Putin',
+            'Emmanuel Macron', 'Angela Merkel', 'Justin Trudeau', 'Boris Johnson',
             'Google', 'Microsoft', 'Apple', 'Amazon', 'Meta', 'Tesla'
         ];
 

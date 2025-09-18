@@ -159,6 +159,10 @@ class ActorPillRenderer {
                 return '🏙️';
             case 'person':
                 return '👤';
+            case 'public_office':
+                return '👔'; // Business suit to represent public officials
+            case 'political_organization':
+                return '🗳️';
             case 'organization':
                 return '🏢';
             default:
@@ -182,7 +186,7 @@ class ActorPillRenderer {
             element.classList.remove('actor-pill-loading');
             
             // Update color class
-            element.className = element.className.replace(/actor-pill-(blue|green|purple|grey)/, `actor-pill-${color}`);
+            element.className = element.className.replace(/actor-pill-(blue|green|red|purple|grey)/, `actor-pill-${color}`);
             
             // Update title
             element.title = `${actor} (${label})`;
@@ -221,6 +225,8 @@ class ActorPillRenderer {
             country: 0,
             region: 0,
             person: 0,
+            public_office: 0,
+            political_organization: 0,
             organization: 0,
             unknown: 0
         };
@@ -278,6 +284,8 @@ class ActorPillRenderer {
             country: [],
             region: [],
             person: [],
+            public_office: [],
+            political_organization: [],
             organization: [],
             unknown: []
         };

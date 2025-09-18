@@ -29,8 +29,8 @@ class NetworkGraphApp {
             (data) => this.handleDataLoaded(data)
         );
 
-        // Set initial view
-        ViewRenderers.switchView('summary');
+        // Set initial view to table (since we removed summary)
+        ViewRenderers.switchView('table');
         
         console.log('Network Graph CSV Analyzer initialized');
     }
@@ -49,6 +49,9 @@ class NetworkGraphApp {
             // Update filter options
             const filterOptions = this.dataManager.getFilterOptions();
             this.uiController.populateFilters(filterOptions);
+            
+            // Hide upload section and show content area
+            this.showDataView();
             
             // Show controls
             this.uiController.showControls(true);
@@ -98,14 +101,15 @@ class NetworkGraphApp {
             const filteredData = this.dataManager.getFilteredData();
             const statistics = this.dataManager.getStatistics();
 
-            // Update summary view
+            // Update table view (includes summary stats at the top)
             ViewRenderers.renderSummary(statistics);
-
-            // Update table view
             ViewRenderers.renderTable(filteredData);
 
             // Update map view
             ViewRenderers.renderMap(filteredData);
+
+            // Update network graph view
+            ViewRenderers.renderNetworkGraph(filteredData);
 
             // Update aggregation view
             const actorGroups = this.dataManager.groupBy('Actor');
@@ -121,11 +125,44 @@ class NetworkGraphApp {
     }
 
     /**
+     * Show the data view and hide the upload section
+     */
+    showDataView() {
+        // Hide upload section
+        const uploadSection = document.querySelector('.upload-section');
+        if (uploadSection) {
+            uploadSection.style.display = 'none';
+        }
+        
+        // Show content area (it should already be visible, but ensure it is)
+        const content = document.querySelector('.content');
+        if (content) {
+            content.style.display = 'block';
+        }
+    }
+
+    /**
+     * Show the upload view and hide the data content
+     */
+    showUploadView() {
+        // Show upload section
+        const uploadSection = document.querySelector('.upload-section');
+        if (uploadSection) {
+            uploadSection.style.display = 'block';
+        }
+        
+        // Content area can remain visible as it will show "no data" messages
+    }
+
+    /**
      * Reset the entire application to initial state
      */
     reset() {
         // Reset data manager
         this.dataManager = new DataManager();
+        
+        // Show upload view again
+        this.showUploadView();
         
         // Reset UI
         this.uiController.resetFilters();
@@ -137,8 +174,8 @@ class NetworkGraphApp {
         // Clear all views
         ViewRenderers.clearAllViews();
         
-        // Set initial view
-        ViewRenderers.switchView('summary');
+        // Set initial view to table (since we removed summary)
+        ViewRenderers.switchView('table');
         
         console.log('Application reset');
     }

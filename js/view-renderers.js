@@ -6,6 +6,7 @@
 class ViewRenderers {
     static mapRenderer = null;
     static actorPillRenderer = null;
+    static networkGraphRenderer = null;
 
     /**
      * Initialize the map renderer
@@ -26,21 +27,30 @@ class ViewRenderers {
     }
 
     /**
+     * Initialize the network graph renderer
+     */
+    static initializeNetworkGraphRenderer() {
+        if (!ViewRenderers.networkGraphRenderer) {
+            ViewRenderers.networkGraphRenderer = new NetworkGraphRenderer();
+        }
+    }
+
+    /**
      * Render the summary statistics view
      * @param {Object} statistics - Statistics object from DataManager
      * @param {string} containerId - ID of the container element
      */
     static renderSummary(statistics, containerId = 'summaryStats') {
         const container = document.getElementById(containerId);
-        const noData = document.querySelector('#summaryView .no-data');
+        const noData = document.querySelector('#tableView .no-data');
         
         if (statistics.totalRecords === 0) {
             container.innerHTML = '';
-            noData.style.display = 'block';
+            if (noData) noData.style.display = 'block';
             return;
         }
         
-        noData.style.display = 'none';
+        if (noData) noData.style.display = 'none';
 
         container.innerHTML = `
             <div class="stat-card">
@@ -73,12 +83,17 @@ class ViewRenderers {
         
         const tableHeader = document.getElementById(headerContainerId);
         const tableBody = document.getElementById(bodyContainerId);
+        const noData = document.querySelector('#tableView .no-data');
 
         if (data.length === 0) {
             tableHeader.innerHTML = '';
-            tableBody.innerHTML = '<tr><td colspan="100%" class="no-data">No data to display</td></tr>';
+            tableBody.innerHTML = '';
+            if (noData) noData.style.display = 'block';
             return;
         }
+
+        // Hide no-data message
+        if (noData) noData.style.display = 'none';
 
         const headers = Object.keys(data[0]);
         tableHeader.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
@@ -113,6 +128,22 @@ class ViewRenderers {
         
         // Render data on map
         await ViewRenderers.mapRenderer.renderData(data);
+    }
+
+    /**
+     * Render the network graph view
+     * @param {Array<Object>} data - Array of data objects
+     */
+    static async renderNetworkGraph(data) {
+        ViewRenderers.initializeNetworkGraphRenderer();
+        
+        // Initialize network graph if not already done
+        if (!ViewRenderers.networkGraphRenderer.svg) {
+            ViewRenderers.networkGraphRenderer.initializeGraph('networkContainer');
+        }
+        
+        // Render data on network graph
+        await ViewRenderers.networkGraphRenderer.renderNetwork(data);
     }
 
     /**
@@ -171,13 +202,18 @@ class ViewRenderers {
                         <div class="group-items">
                             ${items.slice(0, 6).map(item => `
                                 <div class="group-item">
-                                    <div style="margin-bottom: 6px;">
+                                    <div style="margin-bottom: 8px;">
                                         ${item.Actor ? ViewRenderers.actorPillRenderer.renderActorPillsFromString(item.Actor, 'table') : ''}
                                         ${item.Actor && item.Target ? ' → ' : ''}
                                         ${item.Target ? ViewRenderers.actorPillRenderer.renderActorPillsFromString(item.Target, 'table') : ''}
                                     </div>
-                                    <strong>${item.Action || 'Unknown Action'}</strong><br>
-                                    <small>${item.Sentence ? item.Sentence.substring(0, 80) + '...' : 'No description'}</small>
+                                    <div style="font-size: 14px; line-height: 1.4; margin-bottom: 4px;">
+                                        ${item.Sentence || 'No description available'}
+                                    </div>
+                                    <small style="color: #6b7280; font-style: italic;">
+                                        Action: ${item.Action || 'Unknown'}
+                                        ${item['Date Received'] || item.Datetimes ? ` • ${item['Date Received'] || item.Datetimes}` : ''}
+                                    </small>
                                 </div>
                             `).join('')}
                             ${items.length > 6 ? `<div class="group-item group-item-more">...and ${items.length - 6} more</div>` : ''}
@@ -222,6 +258,11 @@ class ViewRenderers {
         if (viewName === 'map' && ViewRenderers.mapRenderer) {
             ViewRenderers.mapRenderer.resizeMap();
         }
+        
+        // Resize network graph when switching to network view
+        if (viewName === 'network' && ViewRenderers.networkGraphRenderer) {
+            ViewRenderers.networkGraphRenderer.resizeGraph();
+        }
     }
 
     /**
@@ -245,6 +286,11 @@ class ViewRenderers {
         // Clear map
         if (ViewRenderers.mapRenderer) {
             ViewRenderers.mapRenderer.showNoData();
+        }
+        
+        // Clear network graph
+        if (ViewRenderers.networkGraphRenderer) {
+            ViewRenderers.networkGraphRenderer.showNoData();
         }
 
         // Show no-data messages
