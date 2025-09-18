@@ -13,7 +13,7 @@
     <div class="container">
         <div class="header">
             <h1>Network Graph Visualizer</h1>
-            <p>Expects Actor, Action, Target relationships with filtering and visualization capabilities</p>
+            <p>Expects Actor, Action, Target, Sentence, Date Received, Locations, Datetimes</p>
         </div>
 
         <div class="upload-section">
@@ -71,6 +71,7 @@
             <button class="tab active" onclick="switchView('table')">📋 Table View</button>
             <button class="tab" onclick="switchView('map')">🗺️ Map View</button>
             <button class="tab" onclick="switchView('network')">🕸️ Network Graph</button>
+            <button class="tab" onclick="switchView('timeline')">⏰ Timeline</button>
             <button class="tab" onclick="switchView('aggregation')">📈 Aggregations</button>
         </div>
 
@@ -98,6 +99,12 @@
                 </div>
             </div>
 
+            <div id="timelineView" class="data-view">
+                <div id="timelineContainer" class="timeline-container">
+                    <div class="no-data">Upload a CSV file to see the timeline</div>
+                </div>
+            </div>
+
             <div id="aggregationView" class="data-view">
                 <div id="aggregationContainer"></div>
             </div>
@@ -114,10 +121,13 @@
     <script src="js/csv-parser.js"></script>
     <script src="js/file-handler.js"></script>
     <script src="js/data-manager.js"></script>
+    <script src="js/political-data-manager.js"></script>
+    <script src="js/profile-page.js"></script>
     <script src="js/wikidata-classifier.js"></script>
     <script src="js/actor-pill-renderer.js"></script>
     <script src="js/map-renderer.js"></script>
     <script src="js/network-graph-renderer.js"></script>
+    <script src="js/timeline-renderer.js"></script>
     <script src="js/view-renderers.js"></script>
     <script src="js/ui-controller.js"></script>
     <script src="js/app.js"></script>

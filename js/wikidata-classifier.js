@@ -34,7 +34,23 @@ class WikidataClassifier {
             'Palestine': 'country',
             
             // Political Organizations
-            'Hamas': 'political_organization'
+            'Hamas': 'political_organization',
+            
+            // Legislative Branch
+            'Congress': 'legislative_branch',
+            'Senate': 'legislative_branch',
+            'House of Representatives': 'legislative_branch',
+            'Parliament': 'legislative_branch',
+            'House of Commons': 'legislative_branch',
+            'House of Lords': 'legislative_branch',
+            'National Assembly': 'legislative_branch',
+            'Legislative Assembly': 'legislative_branch',
+            'General Assembly': 'legislative_branch',
+            'Bundestag': 'legislative_branch',
+            'Bundesrat': 'legislative_branch',
+            'Duma': 'legislative_branch',
+            'Knesset': 'legislative_branch',
+            'Diet': 'legislative_branch'
         };
         
         this.classifications = {
@@ -60,22 +76,34 @@ class WikidataClassifier {
             'Q372436': 'public_office', // statesperson
             'Q212071': 'public_office', // government official
             'Q1097498': 'public_office', // government minister
-            'Q19546': 'public_office', // prime minister
             'Q30461': 'public_office', // president
             'Q48352': 'public_office', // head of state
             'Q2285706': 'public_office', // head of government
             'Q189290': 'public_office', // military officer
             'Q193391': 'public_office', // ambassador
-            'Q16707842': 'public_office', // judge
             'Q40348': 'public_office', // lawyer (in government context)
-            'Q1055894': 'public_office', // governor
             'Q294126': 'public_office', // mayor
-            'Q486839': 'public_office', // senator
-            'Q18018860': 'public_office', // member of parliament
-            'Q13218630': 'public_office', // member of house of representatives
             'Q5096': 'public_office', // mayor
-            'Q15647814': 'public_office', // deputy
-            'Q140686': 'public_office', // chairperson
+            
+            // Legislative Branch (specific category for legislative bodies and members)
+            'Q11204': 'legislative_branch', // parliament
+            'Q35749': 'legislative_branch', // parliament
+            'Q486839': 'legislative_branch', // senator
+            'Q13218630': 'legislative_branch', // member of house of representatives
+            'Q18018860': 'legislative_branch', // member of parliament
+            'Q15647814': 'legislative_branch', // deputy
+            'Q140686': 'legislative_branch', // chairperson (when in legislative context)
+            'Q4164871': 'legislative_branch', // position held by head of parliament
+            'Q1055894': 'legislative_branch', // governor (when in legislative role)
+            'Q19546': 'legislative_branch', // prime minister (head of legislative in some systems)
+            'Q1752346': 'legislative_branch', // cabinet (when legislative)
+            'Q16707842': 'legislative_branch', // judge (when legislative function)
+            'Q4261532': 'legislative_branch', // legislative assembly
+            'Q1752346': 'legislative_branch', // government cabinet (when legislative)
+            'Q217799': 'legislative_branch', // upper house
+            'Q375928': 'legislative_branch', // lower house
+            'Q1752346': 'legislative_branch', // legislative body
+            'Q4261532': 'legislative_branch', // legislature
             
             // Political Organizations (specific category)
             'Q7278': 'political_organization', // political party
@@ -90,10 +118,6 @@ class WikidataClassifier {
             'Q16334295': 'political_organization', // group of politicians
             'Q2824523': 'political_organization', // political alliance
             'Q748019': 'political_organization', // political coalition
-            'Q1752346': 'political_organization', // cabinet
-            'Q11204': 'political_organization', // parliament
-            'Q35749': 'political_organization', // parliament
-            'Q1752346': 'political_organization', // government cabinet
             
             // Regular Organizations
             'Q43229': 'organization', // organization
@@ -324,8 +348,8 @@ class WikidataClassifier {
             return 'unknown';
         }
 
-        // Priority order: country > region > political_organization > public_office > organization > person
-        const priorityOrder = ['country', 'region', 'political_organization', 'public_office', 'organization', 'person'];
+        // Priority order: country > region > legislative_branch > political_organization > public_office > organization > person
+        const priorityOrder = ['country', 'region', 'legislative_branch', 'political_organization', 'public_office', 'organization', 'person'];
         
         // If there are ties, prioritize based on our priority order
         for (const classification of priorityOrder) {
@@ -358,6 +382,8 @@ class WikidataClassifier {
                 return 'green';
             case 'public_office':
                 return 'green'; // Same as person since it maps to person
+            case 'legislative_branch':
+                return 'orange'; // Distinct color for legislative entities
             case 'political_organization':
                 return 'red';
             case 'organization':
@@ -382,6 +408,8 @@ class WikidataClassifier {
                 return 'Person';
             case 'public_office':
                 return 'Public Office';
+            case 'legislative_branch':
+                return 'Legislative Branch';
             case 'political_organization':
                 return 'Political Organization';
             case 'organization':

@@ -31,6 +31,24 @@ class DataManager {
     }
 
     /**
+     * Merge new data with existing data, preserving existing records
+     * @param {Array<Object>} newData - Array of new data objects to merge
+     */
+    mergeData(newData) {
+        // Combine existing data with new data
+        const mergedData = [...this.originalData, ...newData];
+        
+        // Update the data arrays
+        this.originalData = mergedData;
+        this.currentData = [...mergedData];
+        
+        // Reapply filters to the merged data
+        this.applyFilters();
+        
+        console.log(`Merged data: ${this.originalData.length} total records (${newData.length} new records added)`);
+    }
+
+    /**
      * Get the current filtered and sorted data
      * @returns {Array<Object>} Filtered data array
      */
@@ -112,6 +130,11 @@ class DataManager {
                 case 'datetime':
                     aValue = new Date(a.Datetimes || a['Date Received'] || 0);
                     bValue = new Date(b.Datetimes || b['Date Received'] || 0);
+                    
+                    // Handle invalid dates by putting them at the end
+                    if (isNaN(aValue.getTime()) && isNaN(bValue.getTime())) return 0;
+                    if (isNaN(aValue.getTime())) return this.sorting.order === 'asc' ? 1 : -1;
+                    if (isNaN(bValue.getTime())) return this.sorting.order === 'asc' ? -1 : 1;
                     break;
                 case 'actor':
                     aValue = (a.Actor || '').toLowerCase();

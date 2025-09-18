@@ -7,6 +7,7 @@ class ViewRenderers {
     static mapRenderer = null;
     static actorPillRenderer = null;
     static networkGraphRenderer = null;
+    static timelineRenderer = null;
 
     /**
      * Initialize the map renderer
@@ -32,6 +33,15 @@ class ViewRenderers {
     static initializeNetworkGraphRenderer() {
         if (!ViewRenderers.networkGraphRenderer) {
             ViewRenderers.networkGraphRenderer = new NetworkGraphRenderer();
+        }
+    }
+
+    /**
+     * Initialize the timeline renderer
+     */
+    static initializeTimelineRenderer() {
+        if (!ViewRenderers.timelineRenderer) {
+            ViewRenderers.timelineRenderer = new TimelineRenderer();
         }
     }
 
@@ -131,7 +141,33 @@ class ViewRenderers {
     }
 
     /**
-     * Render the network graph view
+     * Render the initial political network from JSON data
+     * @param {Object} networkData - Network data with nodes and links
+     */
+    static async renderInitialPoliticalNetwork(networkData) {
+        ViewRenderers.initializeNetworkGraphRenderer();
+        
+        // Initialize network graph if not already done
+        if (!ViewRenderers.networkGraphRenderer.svg) {
+            ViewRenderers.networkGraphRenderer.initializeGraph('networkContainer');
+        }
+        
+        // Set profile page handler for political figures
+        ViewRenderers.networkGraphRenderer.setProfileHandler((figureData) => {
+            if (window.app && window.app.politicalDataManager && window.app.profilePage) {
+                const profileData = window.app.politicalDataManager.getProfileData(figureData.name);
+                if (profileData) {
+                    window.app.profilePage.showProfile(profileData);
+                }
+            }
+        });
+        
+        // Render political network data
+        await ViewRenderers.networkGraphRenderer.renderPoliticalNetwork(networkData);
+    }
+
+    /**
+     * Render the network graph view with CSV data
      * @param {Array<Object>} data - Array of data objects
      */
     static async renderNetworkGraph(data) {
@@ -142,8 +178,43 @@ class ViewRenderers {
             ViewRenderers.networkGraphRenderer.initializeGraph('networkContainer');
         }
         
-        // Render data on network graph
+        // Set profile page handler for figures
+        ViewRenderers.networkGraphRenderer.setProfileHandler((figureData, csvData) => {
+            if (window.app && window.app.politicalDataManager && window.app.profilePage) {
+                const profileData = window.app.politicalDataManager.getProfileData(figureData.name, csvData);
+                if (profileData) {
+                    window.app.profilePage.showProfile(profileData, csvData);
+                } else {
+                    // Show basic profile for non-political figures
+                    const basicProfile = {
+                        id: figureData.name,
+                        name: figureData.name,
+                        profileType: 'basic_entity',
+                        relatedSentences: csvData || []
+                    };
+                    window.app.profilePage.showProfile(basicProfile, csvData);
+                }
+            }
+        });
+        
+        // Render data on network graph (this will merge with existing political data if any)
         await ViewRenderers.networkGraphRenderer.renderNetwork(data);
+    }
+
+    /**
+     * Render the timeline view
+     * @param {Array<Object>} data - Array of data objects
+     */
+    static renderTimeline(data) {
+        ViewRenderers.initializeTimelineRenderer();
+        
+        // Initialize timeline if not already done
+        if (!ViewRenderers.timelineRenderer.container) {
+            ViewRenderers.timelineRenderer.initialize('timelineContainer');
+        }
+        
+        // Render timeline data
+        ViewRenderers.timelineRenderer.renderTimeline(data);
     }
 
     /**
@@ -202,18 +273,14 @@ class ViewRenderers {
                         <div class="group-items">
                             ${items.slice(0, 6).map(item => `
                                 <div class="group-item">
-                                    <div style="margin-bottom: 8px;">
-                                        ${item.Actor ? ViewRenderers.actorPillRenderer.renderActorPillsFromString(item.Actor, 'table') : ''}
-                                        ${item.Actor && item.Target ? ' → ' : ''}
-                                        ${item.Target ? ViewRenderers.actorPillRenderer.renderActorPillsFromString(item.Target, 'table') : ''}
-                                    </div>
-                                    <div style="font-size: 14px; line-height: 1.4; margin-bottom: 4px;">
+                                    <div class="item-action">${item.Action || 'Unknown Action'}</div>
+                                    <div class="item-sentence">
                                         ${item.Sentence || 'No description available'}
                                     </div>
-                                    <small style="color: #6b7280; font-style: italic;">
-                                        Action: ${item.Action || 'Unknown'}
-                                        ${item['Date Received'] || item.Datetimes ? ` • ${item['Date Received'] || item.Datetimes}` : ''}
-                                    </small>
+                                    <div class="item-meta">
+                                        ${item['Date Received'] || item.Datetimes ? `📅 ${ViewRenderers.formatDateTime(item['Date Received'] || item.Datetimes)}` : ''}
+                                        ${item.Locations ? ` • 📍 ${item.Locations}` : ''}
+                                    </div>
                                 </div>
                             `).join('')}
                             ${items.length > 6 ? `<div class="group-item group-item-more">...and ${items.length - 6} more</div>` : ''}
@@ -221,6 +288,30 @@ class ViewRenderers {
                     </div>
                 `;
             }).join('');
+    }
+
+    /**
+     * Format datetime for display
+     * @param {string} datetime - Datetime string
+     * @returns {string} Formatted datetime
+     */
+    static formatDateTime(datetime) {
+        if (!datetime) return '';
+        
+        try {
+            const date = new Date(datetime);
+            if (isNaN(date.getTime())) return datetime;
+            
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            return datetime;
+        }
     }
 
     /**
@@ -293,6 +384,11 @@ class ViewRenderers {
             ViewRenderers.networkGraphRenderer.showNoData();
         }
 
+        // Clear timeline
+        if (ViewRenderers.timelineRenderer) {
+            ViewRenderers.timelineRenderer.clear();
+        }
+
         // Show no-data messages
         const noDataElements = document.querySelectorAll('.no-data');
         noDataElements.forEach(element => {
@@ -303,3 +399,4 @@ class ViewRenderers {
 
 // Export for use in other modules
 window.ViewRenderers = ViewRenderers;
+

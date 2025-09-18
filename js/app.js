@@ -6,6 +6,8 @@
 class NetworkGraphApp {
     constructor() {
         this.dataManager = new DataManager();
+        this.politicalDataManager = new PoliticalDataManager();
+        this.profilePage = new ProfilePage();
         this.fileHandler = null;
         this.uiController = null;
         
@@ -15,7 +17,7 @@ class NetworkGraphApp {
     /**
      * Initialize the application
      */
-    init() {
+    async init() {
         // Initialize UI Controller
         this.uiController = new UIController(
             this.dataManager, 
@@ -29,10 +31,38 @@ class NetworkGraphApp {
             (data) => this.handleDataLoaded(data)
         );
 
-        // Set initial view to table (since we removed summary)
-        ViewRenderers.switchView('table');
+        // Load political data first
+        await this.loadInitialPoliticalData();
+
+        // Set initial view to network graph to show political data
+        ViewRenderers.switchView('network');
         
         console.log('Network Graph CSV Analyzer initialized');
+    }
+
+    /**
+     * Load initial political data and display network graph
+     */
+    async loadInitialPoliticalData() {
+        try {
+            const loaded = await this.politicalDataManager.loadPoliticalData();
+            if (loaded) {
+                // Update datetime formats and add locations to events
+                this.politicalDataManager.updateDateTimeFormats();
+                
+                // Create initial network data from political figures
+                const networkData = this.politicalDataManager.createInitialNetworkData();
+                
+                // Show the network graph with political data
+                if (networkData.nodes.length > 0) {
+                    await ViewRenderers.renderInitialPoliticalNetwork(networkData);
+                    console.log(`Loaded initial network with ${networkData.nodes.length} political figures`);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading initial political data:', error);
+            // Don't show alert as this is not critical for basic functionality
+        }
     }
 
     /**
@@ -43,8 +73,27 @@ class NetworkGraphApp {
         try {
             console.log(`Loaded ${data.length} records from CSV`);
             
-            // Set data in the data manager
-            this.dataManager.setData(data);
+            // Enhance CSV data with political figure matches
+            const enhancedData = this.politicalDataManager.isDataLoaded() 
+                ? this.politicalDataManager.enhanceCSVData(data)
+                : data;
+            
+            // Check if we have existing political data to preserve
+            if (this.politicalDataManager.isDataLoaded() && !this.dataManager.hasData()) {
+                // First time loading CSV with political data - merge both
+                const politicalRecords = this.politicalDataManager.createPoliticalDataRecords();
+                const allData = [...politicalRecords, ...enhancedData];
+                this.dataManager.setData(allData);
+                console.log(`Initialized with ${politicalRecords.length} political connections and ${enhancedData.length} CSV records`);
+            } else if (this.dataManager.hasData()) {
+                // We already have data - merge the new CSV data with existing
+                this.dataManager.mergeData(enhancedData);
+                console.log(`Merged ${enhancedData.length} new CSV records with existing data`);
+            } else {
+                // No existing data - just set the CSV data
+                this.dataManager.setData(enhancedData);
+                console.log(`Set ${enhancedData.length} CSV records as initial data`);
+            }
             
             // Update filter options
             const filterOptions = this.dataManager.getFilterOptions();
@@ -56,11 +105,11 @@ class NetworkGraphApp {
             // Show controls
             this.uiController.showControls(true);
             
-            // Update all views (initial render)
+            // Update all views (initial render) - this will include both political and CSV data
             this.updateAllViews();
             
             // Initialize actor classifications (async)
-            this.initializeActorClassifications(data);
+            this.initializeActorClassifications(enhancedData);
             
         } catch (error) {
             console.error('Error handling loaded data:', error);
@@ -110,6 +159,9 @@ class NetworkGraphApp {
 
             // Update network graph view
             ViewRenderers.renderNetworkGraph(filteredData);
+
+            // Update timeline view
+            ViewRenderers.renderTimeline(filteredData);
 
             // Update aggregation view
             const actorGroups = this.dataManager.groupBy('Actor');

@@ -22,7 +22,10 @@ class CSVParser {
                     headers.forEach((header, index) => {
                         row[header] = values[index];
                     });
-                    data.push(row);
+                    
+                    // Process the row to split actors and targets with "&" or "and"
+                    const processedRows = CSVParser.splitActorsAndTargets(row);
+                    data.push(...processedRows);
                 }
             }
         }
@@ -83,6 +86,80 @@ class CSVParser {
         return [...new Set(data.flatMap(row => 
             row.Locations ? row.Locations.split(',').map(l => l.trim()) : []
         ))].sort();
+    }
+
+    /**
+     * Split actors and targets that contain "&" or "and" into separate rows
+     * @param {Object} row - Original row object
+     * @returns {Array<Object>} Array of row objects with split actors/targets
+     */
+    static splitActorsAndTargets(row) {
+        const actors = CSVParser.splitEntityNames(row.Actor || '');
+        const targets = CSVParser.splitEntityNames(row.Target || '');
+        
+        // If no splitting occurred, return original row
+        if (actors.length <= 1 && targets.length <= 1) {
+            return [row];
+        }
+        
+        // Create combinations of all actors with all targets
+        const resultRows = [];
+        const actorList = actors.length > 0 ? actors : [''];
+        const targetList = targets.length > 0 ? targets : [''];
+        
+        for (const actor of actorList) {
+            for (const target of targetList) {
+                const newRow = { ...row };
+                if (actor) newRow.Actor = actor;
+                if (target) newRow.Target = target;
+                resultRows.push(newRow);
+            }
+        }
+        
+        return resultRows;
+    }
+
+    /**
+     * Split entity names that contain "&" or "and"
+     * @param {string} entityString - String containing entity names
+     * @returns {Array<string>} Array of individual entity names
+     */
+    static splitEntityNames(entityString) {
+        if (!entityString || typeof entityString !== 'string') {
+            return [];
+        }
+        
+        // First split by commas (existing behavior)
+        const commaSplit = entityString.split(',').map(s => s.trim()).filter(s => s.length > 0);
+        
+        // Then split each part by "&" or "and"
+        const finalSplit = [];
+        
+        for (const part of commaSplit) {
+            // Split by "&" or " and " (with spaces to avoid splitting words like "Anderson")
+            const andSplit = part.split(/\s+(?:&|and)\s+/i)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+            
+            if (andSplit.length > 1) {
+                // Multiple entities found
+                finalSplit.push(...andSplit);
+            } else {
+                // Check for "&" without spaces
+                const ampersandSplit = part.split('&')
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+                
+                if (ampersandSplit.length > 1) {
+                    finalSplit.push(...ampersandSplit);
+                } else {
+                    // No splitting needed
+                    finalSplit.push(part);
+                }
+            }
+        }
+        
+        return finalSplit;
     }
 }
 

@@ -13,6 +13,10 @@ class NetworkGraphRenderer {
         this.height = 600;
         this.containerId = null;
         this.colorScale = null;
+        this.profileHandler = null;
+        this.politicalNodes = [];
+        this.politicalLinks = [];
+        this.zoom = null; // Store zoom behavior
         
         // Initialize color scale for different entity types
         this.initializeColorScale();
@@ -23,8 +27,8 @@ class NetworkGraphRenderer {
      */
     initializeColorScale() {
         this.colorScale = d3.scaleOrdinal()
-            .domain(['actor', 'target', 'both'])
-            .range(['#2563eb', '#dc2626', '#7c3aed']);
+            .domain(['actor', 'target', 'both', 'political_figure', 'democratic', 'republican', 'independent'])
+            .range(['#2563eb', '#dc2626', '#7c3aed', '#059669', '#1d4ed8', '#dc2626', '#6b7280']);
     }
 
     /**
@@ -57,14 +61,14 @@ class NetworkGraphRenderer {
             .style('border-radius', '8px');
 
         // Add zoom behavior
-        const zoom = d3.zoom()
+        this.zoom = d3.zoom()
             .scaleExtent([0.1, 4])
             .on('zoom', (event) => {
                 this.svg.select('.graph-container')
                     .attr('transform', event.transform);
             });
 
-        this.svg.call(zoom);
+        this.svg.call(this.zoom);
 
         // Create main graph container
         this.svg.append('g')
@@ -77,6 +81,14 @@ class NetworkGraphRenderer {
         this.createControls();
 
         console.log('Network graph initialized');
+    }
+
+    /**
+     * Set profile handler function
+     * @param {Function} handler - Function to call when a node is clicked for profile
+     */
+    setProfileHandler(handler) {
+        this.profileHandler = handler;
     }
 
     /**
@@ -179,11 +191,11 @@ class NetworkGraphRenderer {
      * Reset zoom to fit all nodes
      */
     resetZoom() {
-        if (!this.svg) return;
+        if (!this.svg || !this.zoom) return;
 
         const transition = this.svg.transition().duration(750);
         this.svg.call(
-            d3.zoom().transform,
+            this.zoom.transform,
             d3.zoomIdentity.translate(0, 0).scale(1)
         );
     }
@@ -214,36 +226,59 @@ class NetworkGraphRenderer {
             // Add actors as nodes
             actors.forEach(actor => {
                 if (!nodeMap.has(actor)) {
+                    // Determine node type based on record type
+                    const nodeType = record._isPoliticalConnection ? 'political_figure' : 'actor';
                     nodeMap.set(actor, {
                         id: actor,
                         name: actor,
-                        type: 'actor',
+                        type: nodeType,
                         count: 0,
                         actions: new Set(),
-                        records: []
+                        records: [],
+                        // Store political metadata if available
+                        role: record._sourceRole,
+                        isPoliticalFigure: record._isPoliticalConnection
                     });
                 }
                 const node = nodeMap.get(actor);
                 node.count++;
                 node.actions.add(action);
                 node.records.push(record);
+                
+                // If this is a political connection and node wasn't already political, upgrade it
+                if (record._isPoliticalConnection && node.type !== 'political_figure') {
+                    node.type = 'both'; // Both political figure and CSV actor
+                    node.role = record._sourceRole;
+                    node.isPoliticalFigure = true;
+                }
             });
 
             // Add targets as nodes
             targets.forEach(target => {
                 if (!nodeMap.has(target)) {
+                    // Determine node type based on record type
+                    const nodeType = record._isPoliticalConnection ? 'political_figure' : 'target';
                     nodeMap.set(target, {
                         id: target,
                         name: target,
-                        type: 'target',
+                        type: nodeType,
                         count: 0,
                         actions: new Set(),
-                        records: []
+                        records: [],
+                        // Store political metadata if available
+                        role: record._targetRole,
+                        isPoliticalFigure: record._isPoliticalConnection
                     });
                 } else {
-                    // If already exists as actor, mark as both
+                    // If already exists, update type appropriately
                     const node = nodeMap.get(target);
-                    if (node.type === 'actor') {
+                    if (record._isPoliticalConnection && !node.isPoliticalFigure) {
+                        node.type = node.type === 'actor' ? 'both' : 'political_figure';
+                        node.role = record._targetRole;
+                        node.isPoliticalFigure = true;
+                    } else if (node.type === 'actor' && !record._isPoliticalConnection) {
+                        node.type = 'both';
+                    } else if (node.type === 'political_figure' && !record._isPoliticalConnection) {
                         node.type = 'both';
                     }
                 }
@@ -264,7 +299,10 @@ class NetworkGraphRenderer {
                             action: action,
                             count: 0,
                             actions: new Set(),
-                            records: []
+                            records: [],
+                            // Add political metadata if this is a political connection
+                            isPoliticalConnection: record._isPoliticalConnection,
+                            relationship: record._relationship
                         });
                     }
                     const link = linkMap.get(linkId);
@@ -289,6 +327,55 @@ class NetworkGraphRenderer {
     }
 
     /**
+     * Render political network data from JSON
+     * @param {Object} networkData - Network data with nodes and links arrays
+     */
+    async renderPoliticalNetwork(networkData) {
+        if (!this.svg) {
+            console.error('Network graph not initialized. Call initializeGraph first.');
+            return;
+        }
+
+        // Store political data
+        this.politicalNodes = networkData.nodes || [];
+        this.politicalLinks = networkData.links || [];
+        
+        // Debug: Check for invalid links
+        console.log(`Received network data: ${this.politicalNodes.length} nodes, ${this.politicalLinks.length} links`);
+        const invalidLinks = this.politicalLinks.filter(link => {
+            const sourceExists = this.politicalNodes.some(node => node.id === link.source);
+            const targetExists = this.politicalNodes.some(node => node.id === link.target);
+            return !sourceExists || !targetExists;
+        });
+        
+        if (invalidLinks.length > 0) {
+            console.warn(`Found ${invalidLinks.length} invalid links:`, invalidLinks);
+            // Filter out invalid links to prevent D3 errors
+            this.politicalLinks = this.politicalLinks.filter(link => {
+                const sourceExists = this.politicalNodes.some(node => node.id === link.source);
+                const targetExists = this.politicalNodes.some(node => node.id === link.target);
+                if (!sourceExists || !targetExists) {
+                    console.warn(`Removing invalid link: ${link.source} -> ${link.target}`);
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        // Set as current data
+        this.nodes = [...this.politicalNodes];
+        this.links = [...this.politicalLinks];
+
+        if (this.nodes.length === 0) {
+            this.showNoData();
+            return;
+        }
+
+        this.hideNoData();
+        await this.renderNetworkVisualization();
+    }
+
+    /**
      * Render the network graph
      * @param {Array<Object>} data - Array of data objects
      */
@@ -298,8 +385,11 @@ class NetworkGraphRenderer {
             return;
         }
 
-        // Process the data
+        // Process all data (now includes both political and CSV data)
         this.processData(data);
+
+        // No need to merge separately since data already contains everything
+        // The processData method will handle both political connections and CSV data
 
         if (this.nodes.length === 0) {
             this.showNoData();
@@ -307,7 +397,77 @@ class NetworkGraphRenderer {
         }
 
         this.hideNoData();
+        await this.renderNetworkVisualization();
+    }
 
+    /**
+     * Merge CSV data with existing political data
+     */
+    mergeWithPoliticalData() {
+        if (this.politicalNodes.length === 0) return;
+
+        const nodeMap = new Map();
+        const linkMap = new Map();
+
+        // Add political nodes first
+        this.politicalNodes.forEach(node => {
+            nodeMap.set(node.id, { ...node });
+        });
+
+        // Add political links
+        this.politicalLinks.forEach(link => {
+            const linkId = `${link.source}->${link.target}`;
+            linkMap.set(linkId, { ...link });
+        });
+
+        // Add CSV nodes, merging with existing political figures
+        this.nodes.forEach(csvNode => {
+            if (nodeMap.has(csvNode.id)) {
+                // Merge with existing political figure
+                const politicalNode = nodeMap.get(csvNode.id);
+                politicalNode.count += csvNode.count;
+                politicalNode.records = [...(politicalNode.records || []), ...csvNode.records];
+                csvNode.actions.forEach(action => politicalNode.actions.add(action));
+                // Keep political figure styling but add CSV data
+                politicalNode.type = 'both'; // Both political figure and CSV actor
+            } else {
+                // Add new CSV node
+                nodeMap.set(csvNode.id, csvNode);
+            }
+        });
+
+        // Add CSV links
+        this.links.forEach(csvLink => {
+            const linkId = `${csvLink.source}->${csvLink.target}`;
+            if (linkMap.has(linkId)) {
+                // Merge with existing political connection
+                const politicalLink = linkMap.get(linkId);
+                politicalLink.count += csvLink.count;
+                politicalLink.records = [...(politicalLink.records || []), ...csvLink.records];
+                csvLink.actions.forEach(action => politicalLink.actions.add(action));
+            } else {
+                // Add new CSV link
+                linkMap.set(linkId, csvLink);
+            }
+        });
+
+        // Update current nodes and links
+        this.nodes = Array.from(nodeMap.values());
+        this.links = Array.from(linkMap.values());
+
+        // Recalculate node sizes
+        const maxCount = Math.max(...this.nodes.map(n => n.count));
+        this.nodes.forEach(node => {
+            if (!node.radius || node.type === 'political_figure') {
+                node.radius = Math.max(12, Math.min(30, (node.count / maxCount) * 25 + 12));
+            }
+        });
+    }
+
+    /**
+     * Render the network visualization
+     */
+    async renderNetworkVisualization() {
         // Clear existing graph
         this.svg.select('.graph-container').selectAll('*').remove();
 
@@ -378,8 +538,8 @@ class NetworkGraphRenderer {
             .style('pointer-events', 'none')
             .text(d => d.name.length > 15 ? d.name.substring(0, 12) + '...' : d.name);
 
-        // Add click popovers for sentences
-        this.addClickPopovers(node);
+        // Add click handlers for profiles and sentences
+        this.addNodeClickHandlers(node);
 
         // Update node count in controls
         this.svg.select('.node-count')
@@ -425,10 +585,10 @@ class NetworkGraphRenderer {
     }
 
     /**
-     * Add click popovers to nodes that show sentences
+     * Add click handlers to nodes for profiles and sentences
      * @param {d3.Selection} nodeSelection - D3 selection of nodes
      */
-    addClickPopovers(nodeSelection) {
+    addNodeClickHandlers(nodeSelection) {
         // Create popover container (hidden by default)
         let popover = d3.select('body').select('.network-popover');
         if (popover.empty()) {
@@ -469,54 +629,90 @@ class NetworkGraphRenderer {
             .on('click', (event, d) => {
                 event.stopPropagation();
                 
-                // Get sentences for this actor
-                const sentences = this.getSentencesForActor(d.name);
+                console.log('Node clicked:', d.name, {
+                    type: d.type,
+                    isPoliticalFigure: d.isPoliticalFigure,
+                    politicalData: d.politicalData,
+                    role: d.role,
+                    recordCount: d.records ? d.records.length : 0
+                });
                 
-                if (sentences.length === 0) {
-                    const popoverContent = `
-                        <div style="font-weight: 600; margin-bottom: 12px; padding-right: 20px;">${d.name}</div>
-                        <div style="color: #6b7280; font-style: italic;">No sentences found for this actor.</div>
-                    `;
-                    popover.html(popoverContent);
+                // Determine if this should use profile handler or popover
+                // Use profile handler only for nodes that have actual political data
+                const hasActualPoliticalData = d.isPoliticalFigure && 
+                    (d.politicalData || d.type === 'political_figure' || 
+                     (d.type === 'both' && d.role)); // 'both' nodes with political roles
+                
+                console.log('hasActualPoliticalData:', hasActualPoliticalData, 'profileHandler exists:', !!this.profileHandler);
+                
+                if (this.profileHandler && hasActualPoliticalData) {
+                    console.log('Using profile handler for:', d.name);
+                    // Use profile handler for political figures with actual political data
+                    this.profileHandler(d, d.records || []);
                 } else {
-                    const popoverContent = `
-                        <div style="font-weight: 600; margin-bottom: 12px; padding-right: 20px;">${d.name}</div>
-                        <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
-                            ${sentences.length} sentence${sentences.length !== 1 ? 's' : ''} found
-                        </div>
-                        <div style="max-height: 200px; overflow-y: auto;">
-                            ${sentences.map((sentence, index) => `
-                                <div style="margin-bottom: 12px; padding: 8px; background-color: #f9fafb; border-radius: 4px; border-left: 3px solid #2563eb;">
-                                    <div style="font-size: 13px; line-height: 1.4;">${sentence}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="popover-close" style="position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 18px; color: #6b7280; font-weight: bold;">×</div>
-                    `;
-                    popover.html(popoverContent);
-                    
-                    // Re-add close button handler (since we replaced the HTML)
-                    popover.select('.popover-close')
-                        .on('click', () => {
-                            popover.style('visibility', 'hidden');
-                        });
+                    console.log('Using popover for:', d.name);
+                    // Show sentence popover for CSV entities and non-political nodes
+                    this.showSentencePopover(event, d, popover);
                 }
-                
-                // Position popover near the clicked node
-                const containerRect = document.getElementById(this.containerId).getBoundingClientRect();
-                const popoverX = containerRect.left + d.x + 20;
-                const popoverY = containerRect.top + d.y - 50;
-                
-                popover
-                    .style('left', Math.max(10, popoverX) + 'px')
-                    .style('top', Math.max(10, popoverY) + 'px')
-                    .style('visibility', 'visible');
             });
 
         // Close popover when clicking outside
         d3.select('body').on('click.popover', () => {
             popover.style('visibility', 'hidden');
         });
+    }
+
+    /**
+     * Show sentence popover for non-political entities
+     * @param {Event} event - Click event
+     * @param {Object} nodeData - Node data
+     * @param {d3.Selection} popover - Popover element
+     */
+    showSentencePopover(event, nodeData, popover) {
+        console.log('Showing popover for:', nodeData.name, 'Type:', nodeData.type, 'isPoliticalFigure:', nodeData.isPoliticalFigure);
+        
+        // Get sentences for this actor
+        const sentences = this.getSentencesForActor(nodeData.name);
+        
+        if (sentences.length === 0) {
+            const popoverContent = `
+                <div style="font-weight: 600; margin-bottom: 12px; padding-right: 20px;">${nodeData.name}</div>
+                <div style="color: #6b7280; font-style: italic;">No sentences found for this actor.</div>
+            `;
+            popover.html(popoverContent);
+        } else {
+            const popoverContent = `
+                <div style="font-weight: 600; margin-bottom: 12px; padding-right: 20px;">${nodeData.name}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
+                    ${sentences.length} sentence${sentences.length !== 1 ? 's' : ''} found
+                </div>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    ${sentences.map((sentence, index) => `
+                        <div style="margin-bottom: 12px; padding: 8px; background-color: #f9fafb; border-radius: 4px; border-left: 3px solid #2563eb;">
+                            <div style="font-size: 13px; line-height: 1.4;">${sentence}</div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="popover-close" style="position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 18px; color: #6b7280; font-weight: bold;">×</div>
+            `;
+            popover.html(popoverContent);
+            
+            // Re-add close button handler (since we replaced the HTML)
+            popover.select('.popover-close')
+                .on('click', () => {
+                    popover.style('visibility', 'hidden');
+                });
+        }
+        
+        // Position popover near the clicked node
+        const containerRect = document.getElementById(this.containerId).getBoundingClientRect();
+        const popoverX = containerRect.left + nodeData.x + 20;
+        const popoverY = containerRect.top + nodeData.y - 50;
+        
+        popover
+            .style('left', Math.max(10, popoverX) + 'px')
+            .style('top', Math.max(10, popoverY) + 'px')
+            .style('visibility', 'visible');
     }
 
     /**
