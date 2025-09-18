@@ -10,11 +10,14 @@ network-graph/
 ├── styles.css          # External CSS stylesheet with CSS variables
 ├── js/                 # JavaScript modules directory
 │   ├── app.js          # Main application controller
+│   ├── actor-pill-renderer.js # Actor classification pill rendering
 │   ├── csv-parser.js   # CSV parsing utilities
 │   ├── data-manager.js # Data filtering, sorting, and management
 │   ├── file-handler.js # File upload and drag/drop handling
+│   ├── map-renderer.js # Map visualization using Leaflet.js
 │   ├── ui-controller.js # UI controls and interactions
-│   └── view-renderers.js # View rendering functions
+│   ├── view-renderers.js # View rendering functions
+│   └── wikidata-classifier.js # Wikidata API integration for actor classification
 ├── sample-data.csv     # Sample CSV data for testing
 └── README.md           # This documentation file
 ```
@@ -29,7 +32,7 @@ network-graph/
 ### 🔍 Data Views
 1. **Summary View**: Overview statistics showing total records, unique actors, targets, and locations
 2. **Table View**: Traditional spreadsheet-style data display with sortable columns
-3. **Card View**: Individual cards for each record with all field details
+3. **Map View**: Geographic visualization of data points based on location information
 4. **Aggregations View**: Grouped data by Actor, Target, and Location with item counts
 
 ### 🎛️ Filtering & Sorting
@@ -46,50 +49,77 @@ network-graph/
 - **Real-time Statistics**: Live updates of unique counts and totals
 - **Interactive Filtering**: All views update automatically when filters change
 
+### 🗺️ Map Visualization Features
+- **Geographic Display**: Visualizes data points on an interactive map based on location information
+- **Automatic Geocoding**: Converts location names to coordinates using OpenStreetMap's Nominatim service
+- **Smart Markers**: Marker size reflects the number of activities at each location
+- **Detailed Popups**: Click markers to see activity summaries and recent events
+- **Responsive Design**: Optimized for both desktop and mobile viewing
+- **Location Caching**: Geocoded locations are cached for improved performance
+
+### 🏷️ Actor Classification Features
+- **Wikidata Integration**: Automatically classifies actors using Wikidata's "instance of" property
+- **Smart Categorization**: Identifies actors as countries, regions, people, or organizations
+- **Color-Coded Pills**: Visual pills with distinct colors for each actor type:
+  - 🔵 **Blue**: Countries and regions
+  - 🟢 **Green**: People and individuals
+  - 🟣 **Purple**: Organizations and companies
+  - ⚪ **Grey**: Unknown or unclassified entities
+- **Intelligent Caching**: Classification results are cached to improve performance
+- **Rate Limiting**: Respects Wikidata API limits with built-in delays
+
 ## CSS Architecture
 
 ### CSS Variables
-The application uses CSS custom properties (variables) for consistent theming:
+The application uses a minimalist design system with CSS custom properties for consistent theming:
 
 ```css
 :root {
-    /* Primary colors */
-    --primary-blue: #667eea;
-    --primary-purple: #764ba2;
-    --primary-gradient: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
+    /* Action/Interactive color - Blue */
+    --action-blue: #2563eb;
+    --action-blue-hover: #1d4ed8;
+    --action-blue-light: #dbeafe;
+    --action-blue-subtle: rgba(37, 99, 235, 0.1);
     
-    /* Background colors */
-    --bg-white: white;
-    --bg-light-gray: #f8f9fa;
-    --bg-light-blue: #f8f9ff;
-    --bg-lighter-blue: #f0f4ff;
+    /* Background colors - Greys and White */
+    --bg-white: #ffffff;
+    --bg-light: #f9fafb;
+    --bg-medium: #f3f4f6;
+    --bg-dark: #e5e7eb;
     
-    /* Border colors */
-    --border-light: #eee;
-    --border-medium: #ddd;
+    /* Border colors - Greys */
+    --border-light: #e5e7eb;
+    --border-medium: #d1d5db;
+    --border-dark: #9ca3af;
     
-    /* Text colors */
-    --text-dark: #333;
-    --text-medium: #666;
-    --text-white: white;
-    
-    /* Other colors */
-    --shadow-light: rgba(0,0,0,0.1);
-    --hover-blue: rgba(102, 126, 234, 0.1);
+    /* Text colors - Greys */
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --text-white: #ffffff;
 }
 ```
 
-### Customization
-To customize the color scheme:
-1. Open `styles.css`
-2. Modify the CSS variables in the `:root` section
-3. Save the file - changes will apply automatically
+### Design Philosophy
+- **Minimalist Approach**: Clean, uncluttered interface focusing on functionality
+- **Blue for Actions**: All interactive elements (buttons, links, active states) use blue
+- **Grey Scale**: Everything else uses various shades of grey for a professional look
+- **Subtle Shadows**: Minimal use of shadows for depth without distraction
+- **Consistent Spacing**: Systematic spacing using multiples of 4px/8px
 
-### Benefits of CSS Variables
-- **Easy theming**: Change colors globally by modifying variables
-- **Consistency**: All components use the same color palette
-- **Maintainability**: Single source of truth for design tokens
-- **Dark mode ready**: Variables can be easily overridden for different themes
+### Customization
+To customize the design:
+1. **Color Scheme**: Modify CSS variables in the `:root` section of `styles.css`
+2. **Action Color**: Change `--action-blue` variables to use a different accent color
+3. **Grey Scale**: Adjust background and text grey values for different contrast levels
+4. **Spacing**: Modify padding and margin values throughout the stylesheet
+
+### Benefits of Minimalist Design
+- **Focus on Content**: Reduced visual noise helps users focus on data
+- **Professional Appearance**: Clean grey and blue palette looks professional
+- **Easy to Scan**: Clear hierarchy and consistent spacing improve readability
+- **Accessible**: High contrast ratios and clear interactive elements
+- **Timeless**: Minimalist design doesn't go out of style
 
 ## How to Use
 
@@ -98,7 +128,7 @@ To customize the color scheme:
 3. **Explore Data**: Use the tabs to switch between different views:
    - 📊 Summary: Get an overview of your data
    - 📋 Table View: See all records in a traditional table format
-   - 🗃️ Card View: Browse individual records as cards
+   - 🗺️ Map View: Visualize data geographically based on location information
    - 📈 Aggregations: Analyze grouped data by shared attributes
 4. **Filter & Sort**: Use the control panel to filter by specific actors, targets, or locations, and sort the data as needed
 
@@ -156,12 +186,40 @@ The application uses a modular JavaScript architecture with clear separation of 
   - Statistics calculation
 - **Main Class**: `DataManager`
 
+#### `wikidata-classifier.js` - Actor Classification
+- **Purpose**: Integrates with Wikidata API to classify actors by type
+- **Key Features**:
+  - SPARQL queries to Wikidata for "instance of" properties
+  - Intelligent classification into countries, regions, people, or organizations
+  - Rate limiting and error handling for API requests
+  - Results caching for improved performance
+- **Main Class**: `WikidataClassifier`
+
+#### `actor-pill-renderer.js` - Actor Pill Display
+- **Purpose**: Renders color-coded pills for classified actors
+- **Key Features**:
+  - Visual pill components with classification-based colors
+  - Integration with all data views (table, map, aggregation)
+  - Loading states and real-time updates
+  - Multiple pill sizes for different contexts
+- **Main Class**: `ActorPillRenderer`
+
+#### `map-renderer.js` - Map Visualization
+- **Purpose**: Handles geographic visualization using Leaflet.js
+- **Key Features**:
+  - Interactive map with OpenStreetMap tiles
+  - Location geocoding using Nominatim service
+  - Clustered markers with popups showing activity details
+  - Actor pill integration in map popups
+  - Responsive design with mobile optimization
+- **Main Class**: `MapRenderer`
+
 #### `view-renderers.js` - View Rendering
 - **Purpose**: Renders different data views and manages display logic
 - **Key Features**:
   - Summary statistics rendering
   - Table view generation
-  - Card view creation
+  - Map view coordination
   - Aggregation view with grouping
 - **Main Class**: `ViewRenderers` (static methods)
 
@@ -202,10 +260,19 @@ The modular architecture makes it easy to:
 - **Drag & Drop**: Modern file upload interface
 - **Real-time Updates**: All views update instantly when filters change
 - **Memory Efficient**: Handles large CSV files efficiently
-- **No Dependencies**: Pure HTML, CSS, and JavaScript - no external libraries required
+- **Minimal Dependencies**: Uses only Leaflet.js for mapping functionality
 - **CSS Variables**: Modern CSS architecture for easy customization
 - **Modular Architecture**: Clean separation of concerns across multiple JavaScript modules
 - **Error Handling**: Comprehensive error handling throughout the application
+- **Offline Capable**: Works offline after initial load (except for map geocoding)
+
+## External Dependencies
+
+- **Leaflet.js v1.9.4**: Open-source JavaScript library for interactive maps
+- **OpenStreetMap**: Provides map tiles and geocoding services
+- **Nominatim**: OpenStreetMap's geocoding service for converting location names to coordinates
+- **Wikidata Query Service**: SPARQL endpoint for actor classification queries
+- **Wikidata**: Knowledge base providing structured data about entities
 
 ## Development
 

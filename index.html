@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network Graph CSV Analyzer</title>
+    <title>Network Graph Visualizer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Network Graph CSV Analyzer</h1>
-            <p>Upload your CSV file to analyze Actor, Action, Target relationships with filtering and visualization capabilities</p>
+            <h1>Network Graph Visualizer</h1>
+            <p>Expects Actor, Action, Target relationships with filtering and visualization capabilities</p>
         </div>
 
         <div class="upload-section">
@@ -67,7 +70,7 @@
         <div class="view-tabs" id="viewTabs">
             <button class="tab active" onclick="switchView('summary')">📊 Summary</button>
             <button class="tab" onclick="switchView('table')">📋 Table View</button>
-            <button class="tab" onclick="switchView('cards')">🗃️ Card View</button>
+            <button class="tab" onclick="switchView('map')">🗺️ Map View</button>
             <button class="tab" onclick="switchView('aggregation')">📈 Aggregations</button>
         </div>
 
@@ -86,8 +89,10 @@
                 </div>
             </div>
 
-            <div id="cardsView" class="data-view">
-                <div class="card-view" id="cardContainer"></div>
+            <div id="mapView" class="data-view">
+                <div id="mapContainer" class="map-container">
+                    <div class="no-data">Upload a CSV file to see locations on the map</div>
+                </div>
             </div>
 
             <div id="aggregationView" class="data-view">
@@ -96,10 +101,18 @@
         </div>
     </div>
 
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+
     <!-- JavaScript Modules -->
     <script src="js/csv-parser.js"></script>
     <script src="js/file-handler.js"></script>
     <script src="js/data-manager.js"></script>
+    <script src="js/wikidata-classifier.js"></script>
+    <script src="js/actor-pill-renderer.js"></script>
+    <script src="js/map-renderer.js"></script>
     <script src="js/view-renderers.js"></script>
     <script src="js/ui-controller.js"></script>
     <script src="js/app.js"></script>

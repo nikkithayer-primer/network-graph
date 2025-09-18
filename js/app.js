@@ -39,7 +39,7 @@ class NetworkGraphApp {
      * Handle when new data is loaded from a CSV file
      * @param {Array<Object>} data - Parsed CSV data
      */
-    handleDataLoaded(data) {
+    async handleDataLoaded(data) {
         try {
             console.log(`Loaded ${data.length} records from CSV`);
             
@@ -53,12 +53,35 @@ class NetworkGraphApp {
             // Show controls
             this.uiController.showControls(true);
             
-            // Update all views
+            // Update all views (initial render)
             this.updateAllViews();
+            
+            // Initialize actor classifications (async)
+            this.initializeActorClassifications(data);
             
         } catch (error) {
             console.error('Error handling loaded data:', error);
             alert('Error processing the CSV data. Please check the file format.');
+        }
+    }
+
+    /**
+     * Initialize actor classifications using Wikidata
+     * @param {Array<Object>} data - Data array
+     */
+    async initializeActorClassifications(data) {
+        try {
+            // Initialize actor pill renderer if not already done
+            ViewRenderers.initializeActorPillRenderer();
+            
+            // Start classification process
+            await ViewRenderers.actorPillRenderer.initializeClassifications(data);
+            
+            console.log('Actor classifications initialized');
+            
+        } catch (error) {
+            console.error('Error initializing actor classifications:', error);
+            // Don't show alert for classification errors as it's not critical
         }
     }
 
@@ -81,8 +104,8 @@ class NetworkGraphApp {
             // Update table view
             ViewRenderers.renderTable(filteredData);
 
-            // Update cards view
-            ViewRenderers.renderCards(filteredData);
+            // Update map view
+            ViewRenderers.renderMap(filteredData);
 
             // Update aggregation view
             const actorGroups = this.dataManager.groupBy('Actor');

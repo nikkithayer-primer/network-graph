@@ -4,6 +4,27 @@
  */
 
 class ViewRenderers {
+    static mapRenderer = null;
+    static actorPillRenderer = null;
+
+    /**
+     * Initialize the map renderer
+     */
+    static initializeMapRenderer() {
+        if (!ViewRenderers.mapRenderer) {
+            ViewRenderers.mapRenderer = new MapRenderer();
+        }
+    }
+
+    /**
+     * Initialize the actor pill renderer
+     */
+    static initializeActorPillRenderer() {
+        if (!ViewRenderers.actorPillRenderer) {
+            ViewRenderers.actorPillRenderer = new ActorPillRenderer();
+        }
+    }
+
     /**
      * Render the summary statistics view
      * @param {Object} statistics - Statistics object from DataManager
@@ -48,6 +69,8 @@ class ViewRenderers {
      * @param {string} bodyContainerId - ID of the table body container
      */
     static renderTable(data, headerContainerId = 'tableHeader', bodyContainerId = 'tableBody') {
+        ViewRenderers.initializeActorPillRenderer();
+        
         const tableHeader = document.getElementById(headerContainerId);
         const tableBody = document.getElementById(bodyContainerId);
 
@@ -60,38 +83,36 @@ class ViewRenderers {
         const headers = Object.keys(data[0]);
         tableHeader.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
 
-        tableBody.innerHTML = data.map(row => 
-            '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>'
-        ).join('');
+        tableBody.innerHTML = data.map(row => {
+            return '<tr>' + headers.map(h => {
+                const value = row[h] || '';
+                // Render actor column with pills (handle comma-separated values)
+                if (h === 'Actor' && value) {
+                    return `<td>${ViewRenderers.actorPillRenderer.renderActorPillsFromString(value, 'table')}</td>`;
+                }
+                // Render target column with pills (handle comma-separated values)
+                else if (h === 'Target' && value) {
+                    return `<td>${ViewRenderers.actorPillRenderer.renderActorPillsFromString(value, 'table')}</td>`;
+                }
+                return `<td>${value}</td>`;
+            }).join('') + '</tr>';
+        }).join('');
     }
 
     /**
-     * Render the cards view
+     * Render the map view
      * @param {Array<Object>} data - Array of data objects
-     * @param {string} containerId - ID of the container element
      */
-    static renderCards(data, containerId = 'cardContainer') {
-        const container = document.getElementById(containerId);
-
-        if (data.length === 0) {
-            container.innerHTML = '<div class="no-data">No data to display</div>';
-            return;
+    static async renderMap(data) {
+        ViewRenderers.initializeMapRenderer();
+        
+        // Initialize map if not already done
+        if (!ViewRenderers.mapRenderer.map) {
+            await ViewRenderers.mapRenderer.initializeMap('mapContainer');
         }
-
-        container.innerHTML = data.map(row => {
-            const headers = Object.keys(row);
-            return `
-                <div class="data-card">
-                    <div class="card-header">${row.Actor || 'Unknown Actor'} → ${row.Target || 'Unknown Target'}</div>
-                    ${headers.map(header => `
-                        <div class="card-field">
-                            <span class="field-label">${header}:</span>
-                            <span class="field-value">${row[header] || 'N/A'}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }).join('');
+        
+        // Render data on map
+        await ViewRenderers.mapRenderer.renderData(data);
     }
 
     /**
@@ -102,6 +123,8 @@ class ViewRenderers {
      * @param {string} containerId - ID of the container element
      */
     static renderAggregation(actorGroups, targetGroups, locationGroups, containerId = 'aggregationContainer') {
+        ViewRenderers.initializeActorPillRenderer();
+        
         const container = document.getElementById(containerId);
 
         if (Object.keys(actorGroups).length === 0) {
@@ -112,15 +135,15 @@ class ViewRenderers {
         container.innerHTML = `
             <div class="aggregation-section">
                 <div class="aggregation-title">📊 Group by Actor</div>
-                ${ViewRenderers.renderGroups(actorGroups)}
+                ${ViewRenderers.renderGroups(actorGroups, 'actor')}
             </div>
             <div class="aggregation-section">
                 <div class="aggregation-title">🎯 Group by Target</div>
-                ${ViewRenderers.renderGroups(targetGroups)}
+                ${ViewRenderers.renderGroups(targetGroups, 'target')}
             </div>
             <div class="aggregation-section">
                 <div class="aggregation-title">📍 Group by Location</div>
-                ${ViewRenderers.renderGroups(locationGroups)}
+                ${ViewRenderers.renderGroups(locationGroups, 'location')}
             </div>
         `;
     }
@@ -128,28 +151,40 @@ class ViewRenderers {
     /**
      * Render grouped data sections
      * @param {Object} groups - Grouped data object
+     * @param {string} groupType - Type of grouping: 'actor', 'target', or 'location'
      * @returns {string} HTML string for the groups
      */
-    static renderGroups(groups) {
+    static renderGroups(groups, groupType = 'actor') {
         return Object.entries(groups)
             .sort(([,a], [,b]) => b.length - a.length)
-            .map(([key, items]) => `
-                <div class="aggregation-group">
-                    <div class="group-header">
-                        ${key}
-                        <span class="group-count">${items.length} items</span>
+            .map(([key, items]) => {
+                const headerContent = (groupType === 'actor' || groupType === 'target') ? 
+                    ViewRenderers.actorPillRenderer.renderActorPillsFromString(key) : 
+                    key;
+                
+                return `
+                    <div class="aggregation-group">
+                        <div class="group-header">
+                            ${headerContent}
+                            <span class="group-count">${items.length} items</span>
+                        </div>
+                        <div class="group-items">
+                            ${items.slice(0, 6).map(item => `
+                                <div class="group-item">
+                                    <div style="margin-bottom: 6px;">
+                                        ${item.Actor ? ViewRenderers.actorPillRenderer.renderActorPillsFromString(item.Actor, 'table') : ''}
+                                        ${item.Actor && item.Target ? ' → ' : ''}
+                                        ${item.Target ? ViewRenderers.actorPillRenderer.renderActorPillsFromString(item.Target, 'table') : ''}
+                                    </div>
+                                    <strong>${item.Action || 'Unknown Action'}</strong><br>
+                                    <small>${item.Sentence ? item.Sentence.substring(0, 80) + '...' : 'No description'}</small>
+                                </div>
+                            `).join('')}
+                            ${items.length > 6 ? `<div class="group-item group-item-more">...and ${items.length - 6} more</div>` : ''}
+                        </div>
                     </div>
-                    <div class="group-items">
-                        ${items.slice(0, 6).map(item => `
-                            <div class="group-item">
-                                <strong>${item.Action || 'Unknown Action'}</strong><br>
-                                <small>${item.Sentence ? item.Sentence.substring(0, 100) + '...' : 'No description'}</small>
-                            </div>
-                        `).join('')}
-                        ${items.length > 6 ? `<div class="group-item group-item-more">...and ${items.length - 6} more</div>` : ''}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
     }
 
     /**
@@ -182,6 +217,11 @@ class ViewRenderers {
         if (targetView) {
             targetView.classList.add('active');
         }
+
+        // Resize map when switching to map view
+        if (viewName === 'map' && ViewRenderers.mapRenderer) {
+            ViewRenderers.mapRenderer.resizeMap();
+        }
     }
 
     /**
@@ -192,7 +232,6 @@ class ViewRenderers {
             'summaryStats',
             'tableHeader',
             'tableBody', 
-            'cardContainer',
             'aggregationContainer'
         ];
 
@@ -202,6 +241,11 @@ class ViewRenderers {
                 element.innerHTML = '';
             }
         });
+
+        // Clear map
+        if (ViewRenderers.mapRenderer) {
+            ViewRenderers.mapRenderer.showNoData();
+        }
 
         // Show no-data messages
         const noDataElements = document.querySelectorAll('.no-data');

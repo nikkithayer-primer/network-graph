@@ -86,9 +86,21 @@ class DataManager {
     applyFilters() {
         // Apply filters
         this.filteredData = this.currentData.filter(row => {
-            if (this.filters.actor && row.Actor !== this.filters.actor) return false;
-            if (this.filters.target && row.Target !== this.filters.target) return false;
+            // Check actor filter (handle comma-separated values)
+            if (this.filters.actor) {
+                const actors = row.Actor ? row.Actor.split(',').map(a => a.trim()) : [];
+                if (!actors.includes(this.filters.actor)) return false;
+            }
+            
+            // Check target filter (handle comma-separated values)
+            if (this.filters.target) {
+                const targets = row.Target ? row.Target.split(',').map(t => t.trim()) : [];
+                if (!targets.includes(this.filters.target)) return false;
+            }
+            
+            // Check location filter (already handles comma-separated values)
             if (this.filters.location && (!row.Locations || !row.Locations.includes(this.filters.location))) return false;
+            
             return true;
         });
 
@@ -128,9 +140,27 @@ class DataManager {
      * @returns {Object} Object with actors, targets, and locations arrays
      */
     getFilterOptions() {
+        // Get unique actors (handle comma-separated values)
+        const actorSet = new Set();
+        this.currentData.forEach(row => {
+            if (row.Actor && row.Actor.trim()) {
+                const actors = row.Actor.split(',').map(a => a.trim()).filter(a => a.length > 0);
+                actors.forEach(actor => actorSet.add(actor));
+            }
+        });
+
+        // Get unique targets (handle comma-separated values)
+        const targetSet = new Set();
+        this.currentData.forEach(row => {
+            if (row.Target && row.Target.trim()) {
+                const targets = row.Target.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                targets.forEach(target => targetSet.add(target));
+            }
+        });
+
         return {
-            actors: CSVParser.getUniqueValues(this.currentData, 'Actor'),
-            targets: CSVParser.getUniqueValues(this.currentData, 'Target'),
+            actors: [...actorSet].sort(),
+            targets: [...targetSet].sort(),
             locations: CSVParser.getUniqueLocations(this.currentData)
         };
     }
@@ -143,9 +173,23 @@ class DataManager {
     groupBy(field) {
         const groups = {};
         this.filteredData.forEach(row => {
-            const key = row[field] || 'Unknown';
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(row);
+            const value = row[field];
+            if (!value || !value.trim()) {
+                // Handle empty/null values
+                if (!groups['Unknown']) groups['Unknown'] = [];
+                groups['Unknown'].push(row);
+            } else if (field === 'Actor' || field === 'Target') {
+                // Handle comma-separated values for Actor and Target fields
+                const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+                items.forEach(item => {
+                    if (!groups[item]) groups[item] = [];
+                    groups[item].push(row);
+                });
+            } else {
+                // Handle single values for other fields
+                if (!groups[value]) groups[value] = [];
+                groups[value].push(row);
+            }
         });
         return groups;
     }
@@ -173,10 +217,28 @@ class DataManager {
     getStatistics() {
         const data = this.filteredData;
         
+        // Calculate unique actors (handle comma-separated values)
+        const actorSet = new Set();
+        data.forEach(row => {
+            if (row.Actor && row.Actor.trim()) {
+                const actors = row.Actor.split(',').map(a => a.trim()).filter(a => a.length > 0);
+                actors.forEach(actor => actorSet.add(actor));
+            }
+        });
+
+        // Calculate unique targets (handle comma-separated values)
+        const targetSet = new Set();
+        data.forEach(row => {
+            if (row.Target && row.Target.trim()) {
+                const targets = row.Target.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                targets.forEach(target => targetSet.add(target));
+            }
+        });
+        
         return {
             totalRecords: data.length,
-            uniqueActors: new Set(data.map(row => row.Actor).filter(a => a)).size,
-            uniqueTargets: new Set(data.map(row => row.Target).filter(t => t)).size,
+            uniqueActors: actorSet.size,
+            uniqueTargets: targetSet.size,
             uniqueLocations: new Set(data.flatMap(row => 
                 row.Locations ? row.Locations.split(',').map(l => l.trim()) : []
             )).size
