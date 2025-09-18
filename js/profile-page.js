@@ -82,23 +82,33 @@ class ProfilePage {
      */
     generateProfileHTML(profileData, csvData) {
         const isPoliticalFigure = profileData.profileType === 'political_figure';
+        const isEnhancedEntity = profileData.profileType === 'enhanced_entity';
+        const isKnowledgeBaseEntity = profileData.source === 'knowledge_base';
         
         return `
             <div class="profile-header">
                 <button class="profile-close" aria-label="Close profile">×</button>
                 <div class="profile-title-section">
                     <h2 class="profile-name">${profileData.id || profileData.name}</h2>
-                    ${isPoliticalFigure ? `
-                        <div class="profile-role">${profileData.role}</div>
+                    ${isPoliticalFigure || isKnowledgeBaseEntity ? `
+                        <div class="profile-role">${profileData.role || this.getClassificationLabel(profileData.classification)}</div>
                         <div class="profile-meta">
                             ${profileData.state ? `<span class="profile-state">📍 ${profileData.state}</span>` : ''}
-                            ${this.getPartyBadge(profileData)}
+                            ${isPoliticalFigure ? this.getPartyBadge(profileData) : ''}
+                            ${isKnowledgeBaseEntity ? `<span class="profile-source">📚 Knowledge Base</span>` : ''}
+                        </div>
+                    ` : isEnhancedEntity ? `
+                        <div class="profile-role">${this.getClassificationLabel(profileData.classification)}</div>
+                        <div class="profile-meta">
+                            ${profileData.connectionCount ? `<span class="profile-connections">🔗 ${profileData.connectionCount} connections</span>` : ''}
                         </div>
                     ` : ''}
                 </div>
             </div>
 
             <div class="profile-content">
+                ${isEnhancedEntity ? this.generateNetworkOverviewSection(profileData) : ''}
+                ${isKnowledgeBaseEntity ? this.generateKnowledgeBaseSection(profileData) : ''}
                 ${this.generateBasicInfoSection(profileData)}
                 ${this.generateOrganizationsSection(profileData)}
                 ${this.generateConnectionsSection(profileData)}
@@ -390,6 +400,161 @@ class ProfilePage {
      */
     getCurrentProfile() {
         return this.currentProfile;
+    }
+
+    /**
+     * Generate network overview section for enhanced entities
+     * @param {Object} profileData - Profile data object
+     * @returns {string} HTML content
+     */
+    generateNetworkOverviewSection(profileData) {
+        if (!profileData.networkData) return '';
+
+        const networkData = profileData.networkData;
+        const uniquePartners = Array.from(networkData.uniquePartners);
+        const topActions = Array.from(networkData.commonActions.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+
+        return `
+            <div class="profile-section">
+                <h3 class="profile-section-title">Network Overview</h3>
+                <div class="profile-section-content">
+                    <div class="network-stats">
+                        <div class="network-stat">
+                            <div class="network-stat-value">${uniquePartners.length}</div>
+                            <div class="network-stat-label">Unique Connections</div>
+                        </div>
+                        <div class="network-stat">
+                            <div class="network-stat-value">${networkData.asActorCount}</div>
+                            <div class="network-stat-label">Times as Actor</div>
+                        </div>
+                        <div class="network-stat">
+                            <div class="network-stat-value">${networkData.asTargetCount}</div>
+                            <div class="network-stat-label">Times as Target</div>
+                        </div>
+                    </div>
+                    
+                    ${topActions.length > 0 ? `
+                        <div class="network-actions">
+                            <h4>Most Common Actions</h4>
+                            <div class="action-tags">
+                                ${topActions.map(([action, count]) => `
+                                    <span class="action-tag">${action} (${count})</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${networkData.locations.size > 0 ? `
+                        <div class="network-locations">
+                            <h4>Associated Locations</h4>
+                            <div class="location-list">
+                                ${Array.from(networkData.locations).slice(0, 10).join(', ')}
+                                ${networkData.locations.size > 10 ? ` +${networkData.locations.size - 10} more` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${networkData.connections.length > 0 ? `
+                        <div class="network-connections">
+                            <h4>Top Connections</h4>
+                            <div class="connection-list">
+                                ${networkData.connections
+                                    .sort((a, b) => b.count - a.count)
+                                    .slice(0, 5)
+                                    .map(conn => `
+                                        <div class="connection-item">
+                                            <span class="connection-name">${conn.partner}</span>
+                                            <span class="connection-count">${conn.count} interaction${conn.count !== 1 ? 's' : ''}</span>
+                                            <span class="connection-type">${conn.relationship === 'acts_on' ? '→' : '←'}</span>
+                                        </div>
+                                    `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Get classification label for entity types
+     * @param {string} classification - Entity classification
+     * @returns {string} Human-readable label
+     */
+    getClassificationLabel(classification) {
+        if (window.WikidataClassifier && window.WikidataClassifier.getClassificationLabel) {
+            return window.WikidataClassifier.getClassificationLabel(classification);
+        }
+        
+        // Fallback labels
+        const labels = {
+            'person': 'Person',
+            'organization': 'Organization',
+            'country': 'Country',
+            'region': 'Region',
+            'public_office': 'Public Office',
+            'political_organization': 'Political Organization',
+            'unknown': 'Unknown Entity'
+        };
+        
+        return labels[classification] || 'Unknown Entity';
+    }
+
+    /**
+     * Generate knowledge base section for entities from the knowledge base
+     * @param {Object} profileData - Profile data object
+     * @returns {string} HTML content
+     */
+    generateKnowledgeBaseSection(profileData) {
+        if (!profileData || profileData.source !== 'knowledge_base') {
+            return '';
+        }
+
+        return `
+            <div class="profile-section">
+                <h3 class="profile-section-title">Knowledge Base Information</h3>
+                <div class="profile-section-content">
+                    <div class="kb-info-grid">
+                        ${profileData.role ? `
+                            <div class="kb-info-item">
+                                <span class="kb-info-label">Role:</span>
+                                <span class="kb-info-value">${profileData.role}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${profileData.party ? `
+                            <div class="kb-info-item">
+                                <span class="kb-info-label">Party:</span>
+                                <span class="kb-info-value">${profileData.party}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${profileData.state ? `
+                            <div class="kb-info-item">
+                                <span class="kb-info-label">State:</span>
+                                <span class="kb-info-value">${profileData.state}</span>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="kb-info-item">
+                            <span class="kb-info-label">Classification:</span>
+                            <span class="kb-info-value">${this.getClassificationLabel(profileData.classification)}</span>
+                        </div>
+                        
+                        <div class="kb-info-item">
+                            <span class="kb-info-label">Confidence:</span>
+                            <span class="kb-info-value kb-confidence-${profileData.confidence}">${profileData.confidence || 'High'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kb-description">
+                        <p>This entity is part of our curated knowledge base, providing high-quality, pre-verified information that enhances classification accuracy and reduces external API dependencies.</p>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 }
 

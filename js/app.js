@@ -41,16 +41,18 @@ class NetworkGraphApp {
     }
 
     /**
-     * Load political data for Wikidata enhancement (not for display)
+     * Load knowledge base data for entity classification (primary lookup before Wikidata)
      */
     async loadPoliticalDataForEnhancement() {
         try {
             const loaded = await this.politicalDataManager.loadPoliticalData();
             if (loaded) {
-                console.log(`Loaded political data for Wikidata classification enhancement`);
+                console.log(`Loaded knowledge base with ${this.politicalDataManager.politicalFigures.length} entities for classification enhancement`);
+                console.log('Knowledge base will be used as primary lookup source before Wikidata API calls');
             }
         } catch (error) {
-            console.error('Error loading political data:', error);
+            console.error('Error loading knowledge base:', error);
+            console.warn('Will fall back to Wikidata API calls only');
             // Don't show alert as this is not critical for basic functionality
         }
     }

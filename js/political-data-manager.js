@@ -1,6 +1,7 @@
 /**
- * Political Data Manager Module
- * Handles loading and managing political figures data from JSON files
+ * Knowledge Base Manager Module
+ * Manages pre-curated entity data that serves as the primary lookup source
+ * before falling back to Wikidata API calls for entity classification
  */
 
 class PoliticalDataManager {
@@ -11,12 +12,13 @@ class PoliticalDataManager {
     }
 
     /**
-     * Load political figures data from JSON file
+     * Load knowledge base data from JSON file
+     * This serves as the primary entity lookup source before Wikidata API calls
      * @returns {Promise<boolean>} True if loaded successfully
      */
     async loadPoliticalData() {
         try {
-            const response = await fetch('/json/politics_plus_us_nonpolitical_75.json');
+            const response = await fetch('/json/politics_plus_us_nonpolitical_100_plus_orgs.json');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -35,7 +37,7 @@ class PoliticalDataManager {
             this.buildFigureMap();
             
             this.isLoaded = true;
-            console.log(`Loaded ${this.politicalFigures.length} political figures`);
+            console.log(`Loaded ${this.politicalFigures.length} entities into knowledge base`);
             return true;
             
         } catch (error) {
@@ -611,6 +613,93 @@ class PoliticalDataManager {
             }
         }
         return 'United States';
+    }
+
+    /**
+     * Get entity information from knowledge base for classification
+     * This should be called BEFORE making Wikidata API calls
+     * @param {string} entityName - Name of entity to look up
+     * @returns {Object|null} Entity data with classification info, or null if not found
+     */
+    getEntityFromKnowledgeBase(entityName) {
+        if (!this.isLoaded || !entityName) {
+            return null;
+        }
+
+        // Try direct lookup first
+        const figure = this.findFigure(entityName);
+        if (figure) {
+            return {
+                name: figure.id,
+                classification: this.inferClassificationFromFigure(figure),
+                role: figure.role,
+                party: figure.party,
+                state: figure.state,
+                source: 'knowledge_base',
+                confidence: 'high'
+            };
+        }
+
+        return null;
+    }
+
+    /**
+     * Infer classification from knowledge base figure data
+     * @param {Object} figure - Figure object from knowledge base
+     * @returns {string} Classification type
+     */
+    inferClassificationFromFigure(figure) {
+        if (!figure.role) return 'person';
+
+        const role = figure.role.toLowerCase();
+        
+        // Political office holders
+        if (role.includes('senator') || role.includes('representative') || 
+            role.includes('governor') || role.includes('president') ||
+            role.includes('mayor') || role.includes('judge')) {
+            return 'public_office';
+        }
+        
+        // Organizations
+        if (role.includes('organization') || role.includes('company') || 
+            role.includes('corporation') || role.includes('foundation')) {
+            return 'organization';
+        }
+        
+        // Political organizations
+        if (role.includes('party') || role.includes('committee') || 
+            role.includes('pac') || role.includes('campaign')) {
+            return 'political_organization';
+        }
+        
+        // Default to person for political figures
+        return 'person';
+    }
+
+    /**
+     * Get all entity names from knowledge base for pre-caching
+     * @returns {Array<string>} Array of all entity names in knowledge base
+     */
+    getAllKnowledgeBaseEntities() {
+        if (!this.isLoaded) {
+            return [];
+        }
+
+        const entities = new Set();
+        
+        // Add primary names
+        this.politicalFigures.forEach(figure => {
+            if (figure.id) {
+                entities.add(figure.id);
+            }
+        });
+        
+        // Add alternate names from the figure map
+        for (const [name, figure] of this.figureMap) {
+            entities.add(name);
+        }
+        
+        return Array.from(entities);
     }
 }
 

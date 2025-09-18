@@ -8,6 +8,7 @@ class ViewRenderers {
     static actorPillRenderer = null;
     static networkGraphRenderer = null;
     static timelineRenderer = null;
+    static _pendingNetworkData = null; // Store data for lazy network loading
 
     /**
      * Initialize the map renderer
@@ -146,10 +147,27 @@ class ViewRenderers {
     }
 
     /**
-     * Render the network graph view with CSV data
+     * Render the network graph view with CSV data (with lazy loading)
      * @param {Array<Object>} data - Array of data objects
      */
     static async renderNetworkGraph(data) {
+        const networkView = document.querySelector('#networkView');
+        const isNetworkViewActive = networkView && networkView.classList.contains('active');
+        
+        // If network view is not active, store data for lazy loading
+        if (!isNetworkViewActive) {
+            ViewRenderers._pendingNetworkData = data;
+            console.log('Network graph: Lazy loading - storing', data.length, 'records for later rendering');
+            return;
+        }
+        
+        // Clear pending data since we're rendering now
+        ViewRenderers._pendingNetworkData = null;
+        
+        // Performance monitoring
+        const startTime = performance.now();
+        console.log('Network graph: Rendering immediately with', data.length, 'records (view is active)');
+        
         ViewRenderers.initializeNetworkGraphRenderer();
         
         // Initialize network graph if not already done
@@ -178,6 +196,10 @@ class ViewRenderers {
         
         // Render data on network graph (this will merge with existing political data if any)
         await ViewRenderers.networkGraphRenderer.renderNetwork(data);
+        
+        // Performance monitoring
+        const endTime = performance.now();
+        console.log(`Network graph: Rendering completed in ${(endTime - startTime).toFixed(2)}ms`);
     }
 
     /**
@@ -310,7 +332,7 @@ class ViewRenderers {
      * @param {string} viewName - Name of the view to switch to
      * @param {Event} event - Click event object
      */
-    static switchView(viewName, event) {
+    static async switchView(viewName, event) {
         // Update tabs
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
         if (event && event.target) {
@@ -324,14 +346,19 @@ class ViewRenderers {
             targetView.classList.add('active');
         }
 
-        // Refresh map when switching to map view (resize and re-fit to markers)
+        // Handle view-specific initialization
         if (viewName === 'map' && ViewRenderers.mapRenderer) {
+            // Refresh map when switching to map view (resize and re-fit to markers)
             ViewRenderers.mapRenderer.refreshMap();
-        }
-        
-        // Resize network graph when switching to network view
-        if (viewName === 'network' && ViewRenderers.networkGraphRenderer) {
-            ViewRenderers.networkGraphRenderer.resizeGraph();
+        } else if (viewName === 'network') {
+            // Handle network graph lazy loading and resizing
+            if (ViewRenderers._pendingNetworkData) {
+                console.log('Network graph: Loading pending data on view switch');
+                await ViewRenderers.renderNetworkGraph(ViewRenderers._pendingNetworkData);
+            } else if (ViewRenderers.networkGraphRenderer) {
+                // Just resize if already rendered
+                ViewRenderers.networkGraphRenderer.resizeGraph();
+            }
         }
     }
 

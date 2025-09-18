@@ -257,20 +257,41 @@ class WikidataClassifier {
         const originalActor = actor.trim();
         const normalizedActor = this.normalizeName(originalActor);
         
-        // Check manual overrides first (try both original and normalized)
+        // 1. Check manual overrides first (try both original and normalized)
         if (this.manualOverrides[originalActor]) {
             const override = this.manualOverrides[originalActor];
             this.cache.set(originalActor, override);
+            console.log(`Classification from manual override: ${originalActor} → ${override}`);
             return override;
         }
         if (this.manualOverrides[normalizedActor]) {
             const override = this.manualOverrides[normalizedActor];
             this.cache.set(originalActor, override);
+            console.log(`Classification from manual override: ${normalizedActor} → ${override}`);
             return override;
         }
+
+        // 2. Check knowledge base BEFORE cache (knowledge base is authoritative)
+        if (window.app && window.app.politicalDataManager) {
+            const knowledgeBaseResult = window.app.politicalDataManager.getEntityFromKnowledgeBase(originalActor);
+            if (!knowledgeBaseResult && normalizedActor !== originalActor) {
+                // Try normalized name too
+                const normalizedResult = window.app.politicalDataManager.getEntityFromKnowledgeBase(normalizedActor);
+                if (normalizedResult) {
+                    this.cache.set(originalActor, normalizedResult.classification);
+                    console.log(`Classification from knowledge base: ${normalizedActor} → ${normalizedResult.classification}`);
+                    return normalizedResult.classification;
+                }
+            } else if (knowledgeBaseResult) {
+                this.cache.set(originalActor, knowledgeBaseResult.classification);
+                console.log(`Classification from knowledge base: ${originalActor} → ${knowledgeBaseResult.classification}`);
+                return knowledgeBaseResult.classification;
+            }
+        }
         
-        // Check cache (try both original and normalized)
+        // 3. Check cache (try both original and normalized)
         if (this.cache.has(originalActor)) {
+            console.log(`Classification from cache: ${originalActor}`);
             return this.cache.get(originalActor);
         }
         if (this.cache.has(normalizedActor)) {
@@ -287,6 +308,9 @@ class WikidataClassifier {
             return await this.pendingQueries.get(normalizedActor);
         }
 
+        // 4. Fall back to Wikidata API (last resort)
+        console.log(`Falling back to Wikidata API for: ${normalizedActor}`);
+        
         // Create pending query promise - use normalized name for the actual query
         const queryPromise = this.performWikidataQuery(normalizedActor);
         this.pendingQueries.set(originalActor, queryPromise);
@@ -487,9 +511,10 @@ class WikidataClassifier {
     }
 
     /**
-     * Preload classifications for common entities
+     * Preload classifications for common entities and knowledge base entities
      */
     async preloadCommonEntities() {
+        // Start with hardcoded common entities
         const commonEntities = [
             'United States', 'China', 'Russia', 'Germany', 'France', 'United Kingdom',
             'Japan', 'India', 'Brazil', 'Canada', 'Australia', 'Mexico', 'Israel',
@@ -503,9 +528,26 @@ class WikidataClassifier {
             'Google', 'Microsoft', 'Apple', 'Amazon', 'Meta', 'Tesla'
         ];
 
-        console.log('Preloading common entity classifications...');
-        await this.classifyActors(commonEntities);
-        console.log(`Preloaded ${commonEntities.length} common entity classifications`);
+        // Add knowledge base entities for immediate lookup
+        let knowledgeBaseEntities = [];
+        if (window.app && window.app.politicalDataManager && window.app.politicalDataManager.isLoaded) {
+            knowledgeBaseEntities = window.app.politicalDataManager.getAllKnowledgeBaseEntities();
+            console.log(`Found ${knowledgeBaseEntities.length} entities in knowledge base`);
+        }
+
+        const allEntities = [...new Set([...commonEntities, ...knowledgeBaseEntities])];
+
+        console.log(`Preloading ${allEntities.length} entity classifications (${commonEntities.length} common + ${knowledgeBaseEntities.length} from knowledge base)...`);
+        
+        // This will now use knowledge base lookups first, then fall back to Wikidata
+        await this.classifyActors(allEntities);
+        
+        console.log(`Preloaded ${allEntities.length} entity classifications`);
+        
+        // Log performance stats
+        const kbHits = Array.from(this.cache.entries()).filter(([key, value]) => 
+            knowledgeBaseEntities.includes(key)).length;
+        console.log(`Knowledge base provided ${kbHits} classifications, avoiding ${kbHits} Wikidata API calls`);
     }
 }
 

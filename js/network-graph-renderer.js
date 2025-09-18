@@ -18,6 +18,10 @@ class NetworkGraphRenderer {
         this.politicalLinks = [];
         this.zoom = null; // Store zoom behavior
         
+        // Performance optimization: Track data changes
+        this.lastDataHash = null;
+        this.lastProcessedData = null;
+        
         // Initialize color scale for different entity types
         this.initializeColorScale();
     }
@@ -210,6 +214,22 @@ class NetworkGraphRenderer {
     }
 
     /**
+     * Generate a simple hash for data change detection
+     * @param {Array<Object>} data - Array of data objects
+     * @returns {string} Hash string
+     */
+    hashData(data) {
+        if (!data || data.length === 0) return 'empty';
+        
+        // Create a simple hash based on data length and a sample of content
+        const sample = data.slice(0, Math.min(5, data.length))
+            .map(record => `${record.Actor}-${record.Target}-${record.Action}`)
+            .join('|');
+        
+        return `${data.length}-${sample}`;
+    }
+
+    /**
      * Process data and create nodes and links
      * @param {Array<Object>} data - Array of data objects
      */
@@ -217,8 +237,20 @@ class NetworkGraphRenderer {
         if (!data || data.length === 0) {
             this.nodes = [];
             this.links = [];
+            this.lastDataHash = 'empty';
             return;
         }
+
+        // Check if data has changed to avoid unnecessary processing
+        const currentHash = this.hashData(data);
+        if (currentHash === this.lastDataHash && this.nodes.length > 0) {
+            console.log('Network graph: Data unchanged, skipping processing');
+            return;
+        }
+
+        console.log('Network graph: Processing data changes');
+        this.lastDataHash = currentHash;
+        this.lastProcessedData = data;
 
         const nodeMap = new Map();
         const linkMap = new Map();
@@ -482,17 +514,28 @@ class NetworkGraphRenderer {
 
         const graphContainer = this.svg.select('.graph-container');
 
-        // Create force simulation
-        this.simulation = d3.forceSimulation(this.nodes)
-            .force('link', d3.forceLink(this.links)
-                .id(d => d.id)
-                .distance(d => Math.max(50, 100 - (d.count * 2)))
-                .strength(0.5))
-            .force('charge', d3.forceManyBody()
-                .strength(d => -300 - (d.radius * 10)))
-            .force('center', d3.forceCenter(this.width / 2, this.height / 2))
-            .force('collision', d3.forceCollide()
-                .radius(d => d.radius + 5));
+        // Create or update force simulation
+        if (this.simulation) {
+            // Update existing simulation with new data
+            console.log('Network graph: Updating existing simulation');
+            this.simulation.nodes(this.nodes);
+            this.simulation.force('link').links(this.links);
+            this.simulation.force('center', d3.forceCenter(this.width / 2, this.height / 2));
+            this.simulation.alpha(0.3).restart();
+        } else {
+            // Create new simulation
+            console.log('Network graph: Creating new simulation');
+            this.simulation = d3.forceSimulation(this.nodes)
+                .force('link', d3.forceLink(this.links)
+                    .id(d => d.id)
+                    .distance(d => Math.max(50, 100 - (d.count * 2)))
+                    .strength(0.5))
+                .force('charge', d3.forceManyBody()
+                    .strength(d => -300 - (d.radius * 10)))
+                .force('center', d3.forceCenter(this.width / 2, this.height / 2))
+                .force('collision', d3.forceCollide()
+                    .radius(d => d.radius + 5));
+        }
 
         // Create links
         const link = graphContainer.append('g')
@@ -904,18 +947,28 @@ class NetworkGraphRenderer {
     clear() {
         if (this.simulation) {
             this.simulation.stop();
+            this.simulation = null; // Clear reference for garbage collection
         }
         
         if (this.svg) {
+            // Remove event listeners before clearing DOM
+            this.svg.selectAll('.node').on('click', null);
+            this.svg.selectAll('.links line').on('click', null);
             this.svg.selectAll('*').remove();
         }
         
         this.nodes = [];
         this.links = [];
         
+        // Clear performance tracking data
+        this.lastDataHash = null;
+        this.lastProcessedData = null;
+        
         // Remove any popovers
         d3.selectAll('.network-popover').remove();
         d3.selectAll('.network-relationship-popover').remove();
+        
+        console.log('Network graph: Cleared and cleaned up');
     }
 }
 

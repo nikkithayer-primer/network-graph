@@ -31,8 +31,8 @@ class UIController {
         });
 
         // View switching - handled globally through window functions
-        window.switchView = (viewName) => {
-            ViewRenderers.switchView(viewName, event);
+        window.switchView = async (viewName) => {
+            await ViewRenderers.switchView(viewName, event);
         };
         
         // Upload view switching - handled globally
