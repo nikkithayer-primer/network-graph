@@ -488,7 +488,10 @@ class ActorPillRenderer {
             existingPopover.remove();
         }
 
-        // Get sentences for this actor (same as network graph)
+        // Get knowledge base data first
+        const knowledgeBaseData = window.app?.politicalDataManager?.getEntityFromKnowledgeBase(actorName);
+        
+        // Get sentences for this actor (fallback data)
         const sentences = ActorPillRenderer.getSentencesForActor(actorName);
         const classification = window.app?.actorPillRenderer?.getActorClassification(actorName) || 'unknown';
         const classificationLabel = window.WikidataClassifier?.getClassificationLabel(classification) || 'Unknown';
@@ -505,39 +508,14 @@ class ActorPillRenderer {
             padding: 16px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
             font-size: 14px;
-            max-width: 400px;
-            max-height: 300px;
+            max-width: 450px;
+            max-height: 400px;
             overflow-y: auto;
             z-index: 1001;
             pointer-events: auto;
         `;
 
-        let popoverContent;
-        
-        if (sentences.length === 0) {
-            popoverContent = `
-                <div style="font-weight: 600; margin-bottom: 8px; padding-right: 20px;">${actorName}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">${classificationLabel}</div>
-                <div style="color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--text-secondary') : '#6b7280'}; font-style: italic;">No sentences found for this actor.</div>
-                <div class="popover-close" style="position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 18px; color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--text-secondary') : '#6b7280'}; font-weight: bold;">×</div>
-            `;
-        } else {
-            popoverContent = `
-                <div style="font-weight: 600; margin-bottom: 8px; padding-right: 20px;">${actorName}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">${classificationLabel}</div>
-                <div style="font-size: 12px; color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--text-secondary') : '#6b7280'}; margin-bottom: 12px;">
-                    ${sentences.length} sentence${sentences.length !== 1 ? 's' : ''} found
-                </div>
-                <div style="max-height: 200px; overflow-y: auto;">
-                    ${sentences.map((sentence, index) => `
-                        <div style="margin-bottom: 12px; padding: 8px; background-color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--bg-light') : '#f9fafb'}; border-radius: 4px; border-left: 3px solid ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--action-blue') : '#3b82f6'};">
-                            <div style="font-size: 13px; line-height: 1.4;">${sentence}</div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="popover-close" style="position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 18px; color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--text-secondary') : '#6b7280'}; font-weight: bold;">×</div>
-            `;
-        }
+        const popoverContent = ActorPillRenderer.generateEnhancedPopoverContent(actorName, knowledgeBaseData, sentences, classificationLabel);
         
         popover.innerHTML = popoverContent;
         document.body.appendChild(popover);
@@ -578,6 +556,131 @@ class ActorPillRenderer {
                 }
             });
         }, 100);
+    }
+
+    /**
+     * Generate enhanced popover content with knowledge base data
+     * @param {string} actorName - Name of the actor
+     * @param {Object|null} knowledgeBaseData - Data from knowledge base
+     * @param {Array} sentences - Fallback sentences
+     * @param {string} classificationLabel - Classification label
+     * @returns {string} HTML content for popover
+     */
+    static generateEnhancedPopoverContent(actorName, knowledgeBaseData, sentences, classificationLabel) {
+        const closeButton = `<div class="popover-close" style="position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 18px; color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--text-secondary') : '#6b7280'}; font-weight: bold;">×</div>`;
+        
+        // If we have knowledge base data, show enhanced information
+        if (knowledgeBaseData) {
+            let content = `
+                <div style="font-weight: 600; margin-bottom: 8px; padding-right: 20px;">${knowledgeBaseData.name}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
+                    <span style="background-color: #e0f2fe; color: #0277bd; padding: 2px 6px; border-radius: 3px; font-weight: 500;">Knowledge Base</span>
+                </div>
+            `;
+
+            // Role and basic info
+            if (knowledgeBaseData.role) {
+                content += `<div style="margin-bottom: 8px;"><strong>Role:</strong> ${knowledgeBaseData.role}</div>`;
+            }
+            
+            if (knowledgeBaseData.party) {
+                content += `<div style="margin-bottom: 8px;"><strong>Party:</strong> ${knowledgeBaseData.party}</div>`;
+            }
+            
+            if (knowledgeBaseData.state) {
+                content += `<div style="margin-bottom: 8px;"><strong>Location:</strong> ${knowledgeBaseData.state}</div>`;
+            }
+
+            // Organizations
+            if (knowledgeBaseData.organizations && knowledgeBaseData.organizations.length > 0) {
+                content += `<div style="margin-bottom: 8px;"><strong>Organizations:</strong></div>`;
+                content += `<div style="margin-bottom: 12px; padding-left: 12px;">`;
+                knowledgeBaseData.organizations.forEach(org => {
+                    content += `<div style="font-size: 12px; margin-bottom: 4px;">• ${org.name} <em>(${org.relationship})</em></div>`;
+                });
+                content += `</div>`;
+            }
+
+            // Connections
+            if (knowledgeBaseData.connections && knowledgeBaseData.connections.length > 0) {
+                content += `<div style="margin-bottom: 8px;"><strong>Connections:</strong></div>`;
+                content += `<div style="margin-bottom: 12px; padding-left: 12px;">`;
+                knowledgeBaseData.connections.slice(0, 3).forEach(conn => {
+                    content += `<div style="font-size: 12px; margin-bottom: 4px;">• ${conn.target} <em>(${conn.relationship})</em></div>`;
+                });
+                if (knowledgeBaseData.connections.length > 3) {
+                    content += `<div style="font-size: 11px; color: #6b7280; font-style: italic;">... and ${knowledgeBaseData.connections.length - 3} more</div>`;
+                }
+                content += `</div>`;
+            }
+
+            // Recent Events
+            if (knowledgeBaseData.events && knowledgeBaseData.events.length > 0) {
+                content += `<div style="margin-bottom: 8px;"><strong>Recent Events:</strong></div>`;
+                content += `<div style="margin-bottom: 12px; padding-left: 12px;">`;
+                knowledgeBaseData.events.slice(0, 2).forEach(event => {
+                    content += `<div style="font-size: 12px; margin-bottom: 4px;">• ${event.name} <em>(${event.date})</em></div>`;
+                });
+                if (knowledgeBaseData.events.length > 2) {
+                    content += `<div style="font-size: 11px; color: #6b7280; font-style: italic;">... and ${knowledgeBaseData.events.length - 2} more events</div>`;
+                }
+                content += `</div>`;
+            }
+
+            // Quotes from knowledge base
+            if (knowledgeBaseData.quotes && knowledgeBaseData.quotes.length > 0) {
+                content += `<div style="margin-bottom: 8px;"><strong>Quotes:</strong></div>`;
+                content += `<div style="margin-bottom: 12px;">`;
+                knowledgeBaseData.quotes.slice(0, 2).forEach(quote => {
+                    content += `<div style="margin-bottom: 8px; padding: 8px; background-color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--bg-light') : '#f9fafb'}; border-radius: 4px; border-left: 3px solid ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--success-green') : '#10b981'};">`;
+                    content += `<div style="font-size: 13px; line-height: 1.4; font-style: italic;">"${quote.text}"</div>`;
+                    if (quote.source) {
+                        content += `<div style="font-size: 11px; color: #6b7280; margin-top: 4px;">— ${quote.source}${quote.date ? `, ${quote.date}` : ''}</div>`;
+                    }
+                    content += `</div>`;
+                });
+                if (knowledgeBaseData.quotes.length > 2) {
+                    content += `<div style="font-size: 11px; color: #6b7280; font-style: italic;">... and ${knowledgeBaseData.quotes.length - 2} more quotes</div>`;
+                }
+                content += `</div>`;
+            }
+
+            // Add sentence count from CSV data if available
+            if (sentences.length > 0) {
+                content += `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">`;
+                content += `<div style="font-size: 12px; color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--text-secondary') : '#6b7280'};">`;
+                content += `Also appears in ${sentences.length} sentence${sentences.length !== 1 ? 's' : ''} from uploaded data`;
+                content += `</div></div>`;
+            }
+
+            return content + closeButton;
+        }
+        
+        // Fallback to sentence-based popover if no knowledge base data
+        if (sentences.length === 0) {
+            return `
+                <div style="font-weight: 600; margin-bottom: 8px; padding-right: 20px;">${actorName}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">${classificationLabel}</div>
+                <div style="color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--text-secondary') : '#6b7280'}; font-style: italic;">No information found for this actor.</div>
+                ${closeButton}
+            `;
+        } else {
+            return `
+                <div style="font-weight: 600; margin-bottom: 8px; padding-right: 20px;">${actorName}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">${classificationLabel}</div>
+                <div style="font-size: 12px; color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--text-secondary') : '#6b7280'}; margin-bottom: 12px;">
+                    ${sentences.length} sentence${sentences.length !== 1 ? 's' : ''} found
+                </div>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    ${sentences.map((sentence, index) => `
+                        <div style="margin-bottom: 12px; padding: 8px; background-color: ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--bg-light') : '#f9fafb'}; border-radius: 4px; border-left: 3px solid ${window.CSSUtils ? window.CSSUtils.getCSSVariable('--action-blue') : '#3b82f6'};">
+                            <div style="font-size: 13px; line-height: 1.4;">${sentence}</div>
+                        </div>
+                    `).join('')}
+                </div>
+                ${closeButton}
+            `;
+        }
     }
 
     /**

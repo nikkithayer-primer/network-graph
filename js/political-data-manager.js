@@ -634,7 +634,12 @@ class PoliticalDataManager {
                 classification: this.inferClassificationFromFigure(figure),
                 role: figure.role,
                 party: figure.party,
-                state: figure.state,
+                state: figure.state_or_country,
+                organizations: figure.organizations || [],
+                connections: figure.connections || [],
+                events: figure.events || [],
+                quotes: figure.quotes || [],
+                alternate_names: figure.alternate_names || [],
                 source: 'knowledge_base',
                 confidence: 'high'
             };
